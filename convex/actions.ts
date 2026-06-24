@@ -50,15 +50,18 @@ export const searchBusinesses = action({
       `https://api.apify.com/v2/datasets/${datasetId}/items?limit=${cantidad}`,
       { headers: { Authorization: `Bearer ${apiKey}` } }
     );
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const items: any[] = await dataRes.json();
 
     // Filtrar y mapear
-    const filtered = items.filter((item) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filtered = items.filter((item: any) => {
       if (soloSinWeb) return !item.website;
       return true;
     });
 
-    const prospects = filtered.map((item) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prospects = filtered.map((item: any) => ({
       nombre: (item.title || item.name || "Sin nombre").slice(0, 200),
       nicho,
       pais,
