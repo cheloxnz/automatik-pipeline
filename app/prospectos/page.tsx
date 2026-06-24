@@ -187,6 +187,7 @@ export default function Prospectos() {
   const bulkImportMutation = useMutation(api.prospects.bulkImport);
   const updateEstadoMutation = useMutation(api.prospects.updateEstado);
   const removeAllMutation = useMutation(api.prospects.removeAll);
+  const removeSinContactoMutation = useMutation(api.prospects.removeSinContacto);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -286,6 +287,15 @@ export default function Prospectos() {
           Prospectos <span className="text-[#e6edf3] ml-2">{prospects.length}</span>
         </h1>
         <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              const n = await removeSinContactoMutation({});
+              alert(`${n} prospectos sin contacto eliminados`);
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#d29922]/30 rounded-lg text-[#d29922] hover:bg-[#1f1a0a] transition-colors"
+          >
+            <AlertTriangle size={13} /> Sin contacto
+          </button>
           <button
             onClick={async () => {
               if (confirm(`¿Borrar los ${prospects.length} prospectos? Esta acción no se puede deshacer.`)) {

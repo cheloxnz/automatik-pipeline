@@ -104,6 +104,16 @@ export const remove = mutation({
   },
 });
 
+export const removeSinContacto = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("prospects").collect();
+    const sinContacto = all.filter((p) => !p.telefono && !p.email);
+    for (const p of sinContacto) await ctx.db.delete(p._id);
+    return sinContacto.length;
+  },
+});
+
 export const removeAll = mutation({
   args: {},
   handler: async (ctx) => {

@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Component, ReactNode, useEffect, useState } from "react";
+import { Component, ReactNode, useState } from "react";
 import {
   MessageSquare, Users, CheckCircle2, TrendingUp,
   DollarSign, Zap, Activity, Phone,
@@ -161,12 +161,7 @@ const COSTO_SISTEMA = 30;
 function DashboardContent() {
   const stats = useQuery(api.prospects.stats);
   const allProspects = useQuery(api.prospects.list);
-  const [phoneLabel, setPhoneLabel] = useState("+54 9 11 XXXX-XXXX");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("wa_phone_id");
-    if (stored) setPhoneLabel(`ID: ${stored}`);
-  }, []);
+  const [phoneLabel] = useState("+54 9 11 4085-4065");
 
   if (!stats || !allProspects) {
     return (
