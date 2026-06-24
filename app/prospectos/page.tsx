@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Plus, Upload, Search, Trash2, Edit2, X, Check } from "lucide-react";
+import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle } from "lucide-react";
 
 const ESTADOS = ["pendiente", "enviado", "respondio", "cerrado", "error"];
 
@@ -57,6 +57,7 @@ export default function Prospectos() {
   const removeMutation = useMutation(api.prospects.remove);
   const bulkImportMutation = useMutation(api.prospects.bulkImport);
   const updateEstadoMutation = useMutation(api.prospects.updateEstado);
+  const removeAllMutation = useMutation(api.prospects.removeAll);
 
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -154,6 +155,16 @@ export default function Prospectos() {
           Prospectos <span className="text-[#e6edf3] ml-2">{prospects.length}</span>
         </h1>
         <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              if (confirm(`¿Borrar los ${prospects.length} prospectos? Esta acción no se puede deshacer.`)) {
+                await removeAllMutation({});
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#f85149]/30 rounded-lg text-[#f85149] hover:bg-[#2d1313] transition-colors"
+          >
+            <AlertTriangle size={13} /> Limpiar todo
+          </button>
           <button
             onClick={() => fileRef.current?.click()}
             className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"

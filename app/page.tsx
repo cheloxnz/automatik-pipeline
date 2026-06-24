@@ -1,6 +1,29 @@
 "use client";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Component, ReactNode } from "react";
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { err: string | null }> {
+  state = { err: null };
+  static getDerivedStateFromError(e: Error) { return { err: e.message }; }
+  render() {
+    if (this.state.err) {
+      return (
+        <div className="p-6 space-y-4">
+          <div className="bg-[#2d1313] border border-[#f85149]/30 rounded-xl p-5">
+            <p className="text-[#f85149] text-sm font-medium mb-2">Error al cargar el dashboard</p>
+            <p className="text-[11px] text-[#8b949e] font-mono break-all">{this.state.err}</p>
+            <p className="text-[11px] text-[#8b949e] mt-3">
+              Si importaste datos con el CSV viejo, puede haber registros corruptos. Andá a{" "}
+              <b className="text-[#e6edf3]">Prospectos → Limpiar todo</b> y reimportá el CSV.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const TICKET = 500;
 const COSTO_SISTEMA = 30;
@@ -35,7 +58,7 @@ const BADGE: Record<string, string> = {
   error: "bg-[#2d1313] text-[#f85149]",
 };
 
-export default function Dashboard() {
+function DashboardContent() {
   const stats = useQuery(api.prospects.stats);
   const allProspects = useQuery(api.prospects.list);
 
@@ -114,5 +137,13 @@ export default function Dashboard() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <ErrorBoundary>
+      <DashboardContent />
+    </ErrorBoundary>
   );
 }
