@@ -68,7 +68,13 @@ function DashboardContent() {
 
   const ingresos = stats.cerrados * TICKET;
   const roi = ingresos > 0 ? Math.round(ingresos / COSTO_SISTEMA) : 0;
-  const nichosArr = Object.entries(stats.byNicho).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  const byNicho: Record<string, number> = {};
+  for (const p of allProspects) {
+    const k = p.nicho || "Sin nicho";
+    byNicho[k] = (byNicho[k] || 0) + 1;
+  }
+  const nichosArr = Object.entries(byNicho).sort((a, b) => b[1] - a[1]).slice(0, 10);
   const maxNicho = nichosArr[0]?.[1] ?? 1;
   const recent = allProspects.slice(0, 10);
 

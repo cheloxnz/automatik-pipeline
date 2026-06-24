@@ -21,34 +21,28 @@ export const byEstado = query({
 export const stats = query({
   args: {},
   handler: async (ctx) => {
-    const all = await ctx.db.query("prospects").collect();
-    const total = all.length;
-    const enviados = all.filter((p) => p.estado === "enviado").length;
-    const respondieron = all.filter((p) => p.estado === "respondio").length;
-    const cerrados = all.filter((p) => p.estado === "cerrado").length;
-    const errores = all.filter((p) => p.estado === "error").length;
-    const pendientes = all.filter((p) => p.estado === "pendiente").length;
+    const pendientes = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "pendiente")).collect();
+    const enviados = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "enviado")).collect();
+    const respondieron = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "respondio")).collect();
+    const cerrados = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "cerrado")).collect();
+    const errores = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "error")).collect();
 
-    const byNicho: Record<string, number> = {};
-    const byPais: Record<string, number> = {};
-    for (const p of all) {
-      const nicho = p.nicho || "Sin nicho";
-      const pais = p.pais || "Sin país";
-      byNicho[nicho] = (byNicho[nicho] || 0) + 1;
-      byPais[pais] = (byPais[pais] || 0) + 1;
-    }
+    const nPendientes = pendientes.length;
+    const nEnviados = enviados.length;
+    const nRespondieron = respondieron.length;
+    const nCerrados = cerrados.length;
+    const nErrores = errores.length;
+    const total = nPendientes + nEnviados + nRespondieron + nCerrados + nErrores;
 
     return {
       total,
-      enviados,
-      respondieron,
-      cerrados,
-      errores,
-      pendientes,
-      byNicho,
-      byPais,
-      tasaRespuesta: enviados > 0 ? Math.round((respondieron / enviados) * 100) : 0,
-      tasaConversion: enviados > 0 ? Math.round((cerrados / enviados) * 100) : 0,
+      enviados: nEnviados,
+      respondieron: nRespondieron,
+      cerrados: nCerrados,
+      errores: nErrores,
+      pendientes: nPendientes,
+      tasaRespuesta: nEnviados > 0 ? Math.round((nRespondieron / nEnviados) * 100) : 0,
+      tasaConversion: nEnviados > 0 ? Math.round((nCerrados / nEnviados) * 100) : 0,
     };
   },
 });
