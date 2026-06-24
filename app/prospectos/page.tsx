@@ -1,9 +1,138 @@
 "use client";
 import { useState, useRef } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle } from "lucide-react";
+import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2 } from "lucide-react";
+
+const NICHOS_SUGERIDOS = [
+  "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",
+  "Inmobiliaria", "Restaurante", "Gym", "Dental", "Psicología",
+  "Arquitectura", "Ferretería", "Lavandería", "Panadería", "Mecánica",
+];
+
+function SearchModal({ onClose }: { onClose: () => void }) {
+  const searchAction = useAction(api.actions.searchBusinesses);
+  const [nicho, setNicho] = useState("");
+  const [ciudad, setCiudad] = useState("");
+  const [pais, setPais] = useState("Argentina");
+  const [cantidad, setCantidad] = useState(20);
+  const [soloSinWeb, setSoloSinWeb] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{ insertados: number; encontrados: number; filtrados: number } | null>(null);
+  const [error, setError] = useState("");
+
+  async function handleSearch() {
+    if (!nicho || !ciudad) return;
+    setLoading(true);
+    setError("");
+    setResult(null);
+    try {
+      const res = await searchAction({ nicho, ciudad, pais, cantidad, soloSinWeb });
+      setResult(res);
+    } catch (e: any) {
+      setError(e.message || "Error desconocido");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+      <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-md p-6 shadow-2xl">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <MapPin size={15} className="text-[#00ff9d]" />
+            <h2 className="font-medium text-[#e6edf3] text-sm">Buscar negocios en Google Maps</h2>
+          </div>
+          <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Nicho / Rubro</label>
+            <input
+              value={nicho} onChange={(e) => setNicho(e.target.value)}
+              placeholder="Ej: Spa, Peluquería, Veterinaria..."
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
+            />
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {NICHOS_SUGERIDOS.slice(0, 8).map((n) => (
+                <button key={n} onClick={() => setNicho(n)}
+                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${nicho === n ? "border-[#00ff9d]/50 text-[#00ff9d] bg-[#00ff9d]/10" : "border-[#30363d] text-[#8b949e] hover:border-[#58a6ff]/50 hover:text-[#e6edf3]"}`}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Ciudad</label>
+              <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
+                placeholder="Buenos Aires"
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]" />
+            </div>
+            <div>
+              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">País</label>
+              <input value={pais} onChange={(e) => setPais(e.target.value)}
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]" />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Cantidad de resultados</label>
+              <select value={cantidad} onChange={(e) => setCantidad(Number(e.target.value))}
+                className="bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none">
+                {[10, 20, 30, 50].map((n) => <option key={n} value={n}>{n} negocios</option>)}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer mt-4">
+              <div onClick={() => setSoloSinWeb(!soloSinWeb)}
+                className={`w-9 h-5 rounded-full transition-colors relative ${soloSinWeb ? "bg-[#00ff9d]/30" : "bg-[#30363d]"}`}>
+                <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${soloSinWeb ? "left-4 bg-[#00ff9d]" : "left-0.5 bg-[#8b949e]"}`} />
+              </div>
+              <span className="text-[11px] text-[#8b949e]">Solo sin web</span>
+            </label>
+          </div>
+
+          {error && (
+            <div className="bg-[#2d1313] border border-[#f85149]/30 rounded-lg p-3">
+              <p className="text-[11px] text-[#f85149]">{error}</p>
+            </div>
+          )}
+
+          {result && (
+            <div className="bg-[#0d2b1f] border border-[#3fb950]/30 rounded-lg p-3">
+              <p className="text-[11px] text-[#3fb950]">
+                ✓ {result.insertados} negocios agregados a Prospectos
+                {soloSinWeb && ` (de ${result.encontrados} encontrados, ${result.encontrados - result.filtrados} tenían web)`}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2 text-sm border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors">
+            {result ? "Cerrar" : "Cancelar"}
+          </button>
+          <button onClick={handleSearch} disabled={loading || !nicho || !ciudad}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            {loading ? <><Loader2 size={13} className="animate-spin" /> Buscando...</> : <><Search size={13} /> Buscar</>}
+          </button>
+        </div>
+
+        {loading && (
+          <p className="text-[10px] text-[#8b949e] text-center mt-3">
+            Buscando en Google Maps... puede tardar 1-2 minutos
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const ESTADOS = ["pendiente", "enviado", "respondio", "cerrado", "error"];
 
@@ -62,6 +191,7 @@ export default function Prospectos() {
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
   const [showAdd, setShowAdd] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [editId, setEditId] = useState<Id<"prospects"> | null>(null);
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -150,6 +280,7 @@ export default function Prospectos() {
 
   return (
     <div className="p-6">
+      {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
       <div className="flex items-center justify-between mb-5 border-b border-[#30363d] pb-4">
         <h1 className="text-[11px] text-[#8b949e] uppercase tracking-[3px]">
           Prospectos <span className="text-[#e6edf3] ml-2">{prospects.length}</span>
@@ -170,6 +301,12 @@ export default function Prospectos() {
             className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
           >
             <Upload size={13} /> Importar CSV
+          </button>
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors"
+          >
+            <MapPin size={13} /> Buscar en Maps
           </button>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSV} />
           <button
