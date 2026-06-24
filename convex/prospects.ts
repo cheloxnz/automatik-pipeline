@@ -32,8 +32,10 @@ export const stats = query({
     const byNicho: Record<string, number> = {};
     const byPais: Record<string, number> = {};
     for (const p of all) {
-      byNicho[p.nicho] = (byNicho[p.nicho] || 0) + 1;
-      byPais[p.pais] = (byPais[p.pais] || 0) + 1;
+      const nicho = p.nicho || "Sin nicho";
+      const pais = p.pais || "Sin país";
+      byNicho[nicho] = (byNicho[nicho] || 0) + 1;
+      byPais[pais] = (byPais[pais] || 0) + 1;
     }
 
     return {
@@ -105,6 +107,15 @@ export const remove = mutation({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
     await ctx.db.delete(id);
+  },
+});
+
+export const removeAll = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("prospects").collect();
+    for (const p of all) await ctx.db.delete(p._id);
+    return all.length;
   },
 });
 
