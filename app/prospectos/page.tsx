@@ -375,7 +375,7 @@ export default function Prospectos() {
                 { label: "Estado", w: "w-[10%]" },
                 { label: "", w: "w-[6%]" },
               ].map((h) => (
-                <th key={h.label} className={`text-left text-[#6e7681] px-4 py-3 font-bold uppercase text-[9px] tracking-widest ${h.w}`}>{h.label}</th>
+                <th key={h.label} className={`text-left text-[#adbac7] px-4 py-3 font-extrabold uppercase text-[10px] tracking-widest ${h.w}`}>{h.label}</th>
               ))}
             </tr>
           </thead>
