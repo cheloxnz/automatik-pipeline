@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
+@theme {
+  /* Surface */
+  --color-base: #0d1117;
+  --color-surface: #161b22;
+  --color-surface-raised: #21262d;
+  /* Border */
+  --color-border: #30363d;
+  --color-border-subtle: #1c2128;
+  /* Text */
+  --color-text: #e6edf3;
+  --color-text-muted: #8b949e;
+  --color-text-faint: #484f58;
+  /* Accent — use sparingly: only for "active/online" state */
+  --color-accent: #00ff9d;
+  /* Semantic */
+  --color-info: #58a6ff;
+  --color-warning: #f59e0b;
+  --color-success: #34d399;
+  --color-success-bold: #3fb950;
+  --color-danger: #f87171;
+}
+
 * { box-sizing: border-box; }
 
 body {

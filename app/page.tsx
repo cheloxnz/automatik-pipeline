@@ -67,17 +67,17 @@ function BotCard({ phoneId, label, enviados, pendientes }: {
         </div>
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-[#00ff9d] animate-pulse" />
-          <span className="text-[9px] text-[#00ff9d] tracking-widest uppercase">Active</span>
+          <span className="text-[10px] text-[#00ff9d] tracking-widest uppercase">Active</span>
         </div>
       </div>
       <p className="text-[11px] font-mono text-[#e6edf3]">{label}</p>
       <div className="flex gap-6">
         <div>
-          <p className="text-[9px] text-[#8b949e] uppercase tracking-wider mb-0.5">Enviados</p>
+          <p className="text-[10px] text-[#8b949e] uppercase tracking-wider mb-0.5">Enviados</p>
           <p className="text-xl font-medium text-[#e6edf3]">{enviados}</p>
         </div>
         <div>
-          <p className="text-[9px] text-[#8b949e] uppercase tracking-wider mb-0.5">Pendientes</p>
+          <p className="text-[10px] text-[#8b949e] uppercase tracking-wider mb-0.5">Pendientes</p>
           <p className="text-xl font-medium text-[#e6edf3]">{pendientes}</p>
         </div>
       </div>
@@ -96,7 +96,7 @@ function MetricCard({
   return (
     <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5 flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">{label}</p>
+        <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">{label}</p>
         {Icon && <Icon size={13} className="text-[#8b949e]" />}
       </div>
       <p className={`font-medium tracking-tight ${accent ? "text-5xl text-[#00ff9d]" : "text-4xl text-[#e6edf3]"}`}>
@@ -137,19 +137,19 @@ function NichoTile({ name, total, contactados }: { name: string; total: number; 
     <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-4 hover:border-[#00ff9d]/30 transition-colors">
       <div className="flex items-start justify-between mb-3">
         <span className="text-2xl">{nichoIcon(name)}</span>
-        <span className="text-[9px] text-[#00ff9d] bg-[#00ff9d]/10 px-2 py-0.5 rounded-full font-medium">
+        <span className="text-[10px] text-[#00ff9d] bg-[#00ff9d]/10 px-2 py-0.5 rounded-full font-medium">
           {pct}%
         </span>
       </div>
       <p className="text-[11px] text-[#e6edf3] font-medium mb-1 leading-tight">{name}</p>
       <div className="flex items-baseline gap-1">
         <span className="text-3xl font-medium text-[#e6edf3]">{total}</span>
-        <span className="text-[9px] text-[#8b949e]">leads</span>
+        <span className="text-[10px] text-[#8b949e]">leads</span>
       </div>
       <div className="mt-2 bg-[#21262d] rounded-full h-1">
         <div className="h-1 rounded-full bg-[#00ff9d]" style={{ width: `${Math.max(pct, 2)}%` }} />
       </div>
-      <p className="text-[9px] text-[#8b949e] mt-1">{contactados} contactados</p>
+      <p className="text-[10px] text-[#8b949e] mt-1">{contactados} contactados</p>
     </div>
   );
 }
@@ -160,11 +160,11 @@ const COSTO_SISTEMA = 30;
 
 function DashboardContent() {
   const stats = useQuery(api.prospects.stats);
-  const allProspects = useQuery(api.prospects.recent);
+  const nichosData = useQuery(api.prospects.statsByNicho);
   const porPais = useQuery(api.prospects.statsByPais);
   const [phoneLabel] = useState("+54 9 11 4085-4065");
 
-  if (!stats || !allProspects || porPais === undefined) {
+  if (!stats || nichosData === undefined || porPais === undefined) {
     return (
       <div className="flex items-center justify-center h-full gap-3">
         <Activity size={16} className="text-[#00ff9d] animate-pulse" />
@@ -183,15 +183,7 @@ function DashboardContent() {
   const costoPorReunion = stats.respondieron > 0 ? (COSTO_SISTEMA / stats.respondieron).toFixed(2) : "—";
   const profitNeto = ingresos - COSTO_SISTEMA;
 
-  /* byNicho from list */
-  const byNicho: Record<string, { total: number; contactados: number }> = {};
-  for (const p of allProspects) {
-    const k = p.nicho || "Sin nicho";
-    if (!byNicho[k]) byNicho[k] = { total: 0, contactados: 0 };
-    byNicho[k].total++;
-    if (p.estado !== "pendiente") byNicho[k].contactados++;
-  }
-  const nichosArr = Object.entries(byNicho).sort((a, b) => b[1].total - a[1].total);
+  const nichosArr = nichosData ?? [];
 
   const today = new Date().toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" }).toUpperCase();
 
@@ -205,29 +197,29 @@ function DashboardContent() {
             <Zap size={14} className="text-[#00ff9d]" />
             <h1 className="text-xs font-bold tracking-[4px] uppercase text-[#e6edf3]">Automatik Pipeline</h1>
           </div>
-          <p className="text-[9px] text-[#8b949e] tracking-[2px] uppercase ml-5">Outreach Command Center</p>
+          <p className="text-[10px] text-[#8b949e] tracking-[2px] uppercase ml-5">Outreach Command Center</p>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00ff9d] animate-pulse" />
-            <span className="text-[9px] text-[#00ff9d] tracking-widest uppercase">System Online</span>
+            <span className="text-[10px] text-[#00ff9d] tracking-widest uppercase">System Online</span>
           </div>
           <span className="text-[10px] text-[#8b949e] font-mono">{today} · <LiveClock /></span>
         </div>
       </div>
 
       {/* ── Bot + Quick Stats ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <BotCard phoneId="1185795881287585" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} />
         <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5 flex flex-col justify-between">
-          <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Respondieron</p>
+          <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">Respondieron</p>
           <div>
             <p className={`text-5xl font-medium tracking-tight ${stats.respondieron > 0 ? "text-[#f59e0b]" : "text-[#484f58]"}`}>{stats.respondieron}</p>
             <p className="text-[10px] text-[#8b949e] mt-1">tasa {stats.tasaRespuesta}%</p>
           </div>
         </div>
         <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5 flex flex-col justify-between">
-          <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Cerrados</p>
+          <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">Cerrados</p>
           <div>
             <p className={`text-5xl font-medium tracking-tight ${stats.cerrados > 0 ? "text-[#34d399]" : "text-[#484f58]"}`}>{stats.cerrados}</p>
             <p className="text-[10px] text-[#8b949e] mt-1">conversión {stats.tasaConversion}%</p>
@@ -237,12 +229,12 @@ function DashboardContent() {
 
       {/* ── Funnel visual ── */}
       <div className="flex items-center justify-between">
-        <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Funnel de conversión</p>
+        <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">Funnel de conversión</p>
         <div className="flex items-center gap-4">
-          <span className="text-[9px] text-[#8b949e]">
+          <span className="text-[10px] text-[#8b949e]">
             Respuesta <span className={`font-bold ml-1 ${stats.tasaRespuesta >= 15 ? "text-[#3fb950]" : stats.tasaRespuesta >= 5 ? "text-[#d29922]" : "text-[#f85149]"}`}>{stats.tasaRespuesta}%</span>
           </span>
-          <span className="text-[9px] text-[#8b949e]">
+          <span className="text-[10px] text-[#8b949e]">
             Cierre <span className={`font-bold ml-1 ${stats.tasaConversion >= 10 ? "text-[#3fb950]" : stats.tasaConversion >= 3 ? "text-[#d29922]" : "text-[#f85149]"}`}>{stats.tasaConversion}%</span>
           </span>
         </div>
@@ -280,7 +272,7 @@ function DashboardContent() {
                         </span>
                       </div>
                       {dropPct !== null ? (
-                        <span className={`text-[9px] font-bold w-12 text-right ${dropPct >= 20 ? "text-[#3fb950]" : dropPct >= 8 ? "text-[#d29922]" : "text-[#f85149]"}`}>
+                        <span className={`text-[10px] font-bold w-12 text-right ${dropPct >= 20 ? "text-[#3fb950]" : dropPct >= 8 ? "text-[#d29922]" : "text-[#f85149]"}`}>
                           {dropPct}%
                         </span>
                       ) : (
@@ -292,8 +284,8 @@ function DashboardContent() {
               })}
               {/* drop labels */}
               <div className="flex items-center gap-3 pt-1 border-t border-[#1c2128]">
-                <span className="text-[9px] text-[#484f58] w-[calc(28px+112px+12px)]">Conversión por etapa →</span>
-                <div className="flex-1 flex justify-around text-[9px] text-[#484f58]">
+                <span className="text-[10px] text-[#484f58] w-[calc(28px+112px+12px)]">Conversión por etapa →</span>
+                <div className="flex-1 flex justify-around text-[10px] text-[#484f58]">
                   {[
                     stats.total > 0 ? `${Math.round((stats.enviados / stats.total) * 100)}% enviado` : "—",
                     stats.enviados > 0 ? `${stats.tasaRespuesta}% respondió` : "—",
@@ -311,7 +303,7 @@ function DashboardContent() {
       </div>
 
       {/* ── Revenue ── */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <MetricCard
           label="Ingresos generados"
           value={`USD ${ingresos.toLocaleString()}`}
@@ -351,16 +343,16 @@ function DashboardContent() {
       {nichosArr.length > 0 && (
         <>
           <div className="flex items-center justify-between">
-            <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">
+            <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">
               Negocios / Contactados
             </p>
-            <p className="text-[9px] text-[#8b949e]">
-              {stats.total} leads · {Object.keys(byNicho).length} nichos distintos
+            <p className="text-[10px] text-[#8b949e]">
+              {stats.total} leads · {nichosArr.length} nichos distintos
             </p>
           </div>
-          <div className="grid grid-cols-4 gap-3">
-            {nichosArr.map(([name, { total, contactados }]) => (
-              <NichoTile key={name} name={name} total={total} contactados={contactados} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {nichosArr.map(({ nicho, total, contactados }) => (
+              <NichoTile key={nicho} name={nicho} total={total} contactados={contactados} />
             ))}
           </div>
         </>
@@ -370,8 +362,8 @@ function DashboardContent() {
       {porPais && porPais.length > 0 && (
         <>
           <div className="flex items-center justify-between">
-            <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Cobertura por País</p>
-            <p className="text-[9px] text-[#8b949e]">{porPais.length} países con prospectos</p>
+            <p className="text-[10px] text-[#8b949e] uppercase tracking-[3px]">Cobertura por País</p>
+            <p className="text-[10px] text-[#8b949e]">{porPais.length} países con prospectos</p>
           </div>
           <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-4">
             <div className="grid grid-cols-2 gap-x-8 gap-y-2">
@@ -389,7 +381,7 @@ function DashboardContent() {
                       />
                     </div>
                     <span className="text-[11px] font-bold text-[#e6edf3] w-12 text-right">{total.toLocaleString()}</span>
-                    <span className="text-[9px] text-[#484f58] w-8 text-right">{pct}%</span>
+                    <span className="text-[10px] text-[#484f58] w-8 text-right">{pct}%</span>
                   </div>
                 );
               })}

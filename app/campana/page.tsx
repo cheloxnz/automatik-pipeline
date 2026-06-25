@@ -263,7 +263,7 @@ export default function Campana() {
               <Filter size={14} className="text-[#d29922]" />
               <h2 className="text-sm font-bold text-[#e6edf3]">Filtros de campaña</h2>
               {(nichosFilter.length > 0 || paisesFilter.length > 0) && (
-                <span className="ml-auto text-[9px] text-[#d29922] bg-[#d29922]/10 px-2 py-0.5 rounded-full font-bold">
+                <span className="ml-auto text-[10px] text-[#d29922] bg-[#d29922]/10 px-2 py-0.5 rounded-full font-bold">
                   ACTIVO
                 </span>
               )}
@@ -275,7 +275,7 @@ export default function Campana() {
                 </p>
                 <FilterChips options={NICHOS_DISPONIBLES} selected={nichosFilter} onToggle={toggleNicho} color="#58a6ff" />
                 {nichosFilter.length > 0 && (
-                  <button onClick={() => setNichosFilter([])} className="text-[9px] text-[#484f58] hover:text-[#8b949e] mt-2">
+                  <button onClick={() => setNichosFilter([])} className="text-[10px] text-[#484f58] hover:text-[#8b949e] mt-2">
                     Limpiar
                   </button>
                 )}
@@ -286,7 +286,7 @@ export default function Campana() {
                 </p>
                 <FilterChips options={PAISES_DISPONIBLES} selected={paisesFilter} onToggle={togglePais} color="#3fb950" />
                 {paisesFilter.length > 0 && (
-                  <button onClick={() => setPaisesFilter([])} className="text-[9px] text-[#484f58] hover:text-[#8b949e] mt-2">
+                  <button onClick={() => setPaisesFilter([])} className="text-[10px] text-[#484f58] hover:text-[#8b949e] mt-2">
                     Limpiar
                   </button>
                 )}
@@ -330,10 +330,10 @@ export default function Campana() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-[9px] text-[#484f58] uppercase tracking-widest mb-2">Próximos envíos (hora ARG)</p>
+                  <p className="text-[10px] text-[#484f58] uppercase tracking-widest mb-2">Próximos envíos (hora ARG)</p>
                   <div className="flex flex-wrap gap-1">
                     {slots.map((s) => (
-                      <span key={s} className="text-[9px] font-mono text-[#484f58] bg-[#0d1117] px-1.5 py-0.5 rounded">
+                      <span key={s} className="text-[10px] font-mono text-[#484f58] bg-[#0d1117] px-1.5 py-0.5 rounded">
                         {s}
                       </span>
                     ))}
@@ -379,7 +379,7 @@ export default function Campana() {
             <div className="flex items-center gap-2 mb-3">
               <Zap size={14} className="text-[#00ff9d]" />
               <h2 className="text-sm font-bold text-[#e6edf3]">Lanzar ahora</h2>
-              <span className="text-[9px] text-[#484f58] ml-1">manual</span>
+              <span className="text-[10px] text-[#484f58] ml-1">manual</span>
             </div>
 
             <div className="bg-[#0d1117] rounded-lg p-3 mb-4 space-y-1.5">

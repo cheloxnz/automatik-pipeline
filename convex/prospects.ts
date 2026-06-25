@@ -29,6 +29,23 @@ const PAISES_CONOCIDOS = [
   "Brasil", "Panama", "Costa Rica", "Guatemala", "Honduras",
 ];
 
+export const statsByNicho = query({
+  args: {},
+  handler: async (ctx) => {
+    const all = await ctx.db.query("prospects").collect();
+    const byNicho: Record<string, { total: number; contactados: number }> = {};
+    for (const p of all) {
+      const k = p.nicho || "Sin nicho";
+      if (!byNicho[k]) byNicho[k] = { total: 0, contactados: 0 };
+      byNicho[k].total++;
+      if (p.estado !== "pendiente") byNicho[k].contactados++;
+    }
+    return Object.entries(byNicho)
+      .map(([nicho, v]) => ({ nicho, ...v }))
+      .sort((a, b) => b.total - a.total);
+  },
+});
+
 export const statsByPais = query({
   args: {},
   handler: async (ctx) => {

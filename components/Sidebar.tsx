@@ -69,7 +69,7 @@ export default function Sidebar() {
       </nav>
       <div className="p-4 border-t border-[#30363d]">
         <div className="flex items-center gap-2">
-          <div className="pulse-dot" />
+          <div className="w-1.5 h-1.5 rounded-full bg-[#3fb950]" />
           <span className="text-[10px] text-[#00ff9d]">Bot activo</span>
         </div>
       </div>

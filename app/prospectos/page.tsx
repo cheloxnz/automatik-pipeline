@@ -38,14 +38,14 @@ function SearchModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Buscar en Google Maps">
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <MapPin size={15} className="text-[#00ff9d]" />
             <h2 className="font-semibold text-[#e6edf3] text-sm tracking-wide">Buscar en Google Maps</h2>
           </div>
-          <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
         </div>
 
         <div className="space-y-3">
@@ -54,7 +54,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
             <input
               value={nicho} onChange={(e) => setNicho(e.target.value)}
               placeholder="Ej: Spa, Peluquería, Veterinaria..."
-              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
+              className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40 focus:border-[#58a6ff] placeholder-[#484f58]"
             />
             <div className="flex flex-wrap gap-1.5 mt-2">
               {NICHOS_SUGERIDOS.slice(0, 8).map((n) => (
@@ -71,12 +71,12 @@ function SearchModal({ onClose }: { onClose: () => void }) {
               <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">Ciudad</label>
               <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
                 placeholder="Buenos Aires"
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]" />
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40 focus:border-[#58a6ff] placeholder-[#484f58]" />
             </div>
             <div>
               <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">País</label>
               <input value={pais} onChange={(e) => setPais(e.target.value)}
-                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]" />
+                className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40 focus:border-[#58a6ff]" />
             </div>
           </div>
 
@@ -155,11 +155,11 @@ const EMPTY: ProspectForm = { nombre: "", nicho: "", pais: "", ciudad: "", telef
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label={title}>
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-[#e6edf3] text-base">{title}</h2>
-          <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
+          <button onClick={onClose} aria-label="Cerrar" className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
         </div>
         {children}
       </div>
@@ -175,7 +175,7 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
       <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
+        className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40 focus:border-[#58a6ff] placeholder-[#484f58]"
       />
     </div>
   );
@@ -205,7 +205,7 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-[420px] bg-[#161b22] border-l border-[#30363d] z-50 flex flex-col shadow-2xl">
+      <div className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[#161b22] border-l border-[#30363d] z-50 flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label={`Conversación con ${prospect.nombre}`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d] shrink-0">
@@ -218,7 +218,7 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
               <p className="text-[10px] text-[#8b949e]">{prospect.nicho} · {prospect.ciudad}</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3] transition-colors">
+          <button onClick={onClose} aria-label="Cerrar conversación" className="text-[#8b949e] hover:text-[#e6edf3] transition-colors">
             <X size={18} />
           </button>
         </div>
@@ -281,7 +281,7 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
                 <div key={m._id}>
                   {showDate && (
                     <div className="flex justify-center my-2">
-                      <span className="text-[9px] text-[#484f58] bg-[#0d1117] px-2 py-0.5 rounded-full">{fecha}</span>
+                      <span className="text-[10px] text-[#484f58] bg-[#0d1117] px-2 py-0.5 rounded-full">{fecha}</span>
                     </div>
                   )}
                   <div className={`flex ${saliente ? "justify-end" : "justify-start"}`}>
@@ -291,7 +291,7 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
                         : "bg-[#21262d] border border-[#30363d] rounded-tl-sm"
                     }`}>
                       <p className="text-[12px] text-[#e6edf3] leading-relaxed whitespace-pre-wrap">{m.texto}</p>
-                      <p className={`text-[9px] mt-1 text-right ${saliente ? "text-[#00ff9d]/50" : "text-[#484f58]"}`}>
+                      <p className={`text-[10px] mt-1 text-right ${saliente ? "text-[#00ff9d]/50" : "text-[#484f58]"}`}>
                         {formatHora(m.createdAt)}
                       </p>
                     </div>
@@ -524,7 +524,7 @@ export default function Prospectos() {
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
             placeholder="Buscar por nombre, nicho, ciudad..."
-            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-8 pr-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
+            className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-8 pr-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:ring-2 focus:ring-[#58a6ff]/40 focus:border-[#58a6ff] placeholder-[#484f58]"
           />
         </div>
         <select
@@ -584,10 +584,10 @@ export default function Prospectos() {
                   className="accent-[#60a5fa] w-3.5 h-3.5 cursor-pointer"
                 />
               </th>
-              <th className="text-left text-[#484f58] px-3 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[34%]">Negocio</th>
-              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[20%]">Ubicación</th>
-              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[13%]">Contacto</th>
-              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[16%]">Estado</th>
+              <th className="text-left text-[#484f58] px-3 py-3 font-bold uppercase text-[10px] tracking-[2px] w-[34%]">Negocio</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[10px] tracking-[2px] w-[20%]">Ubicación</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[10px] tracking-[2px] w-[13%]">Contacto</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[10px] tracking-[2px] w-[16%]">Estado</th>
               <th className="w-[13%]" />
             </tr>
           </thead>
@@ -673,19 +673,19 @@ export default function Prospectos() {
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => setPanelProspect(p)}
-                        title="Ver conversación"
+                        aria-label="Ver conversación"
                         className="text-[#484f58] hover:text-[#60a5fa] transition-colors"
                       >
                         <MessageCircle size={13} />
                       </button>
-                      <button onClick={() => openEdit(p)} title="Editar" className="text-[#484f58] hover:text-[#60a5fa] transition-colors">
+                      <button onClick={() => openEdit(p)} aria-label="Editar prospecto" className="text-[#484f58] hover:text-[#60a5fa] transition-colors">
                         <Edit2 size={13} />
                       </button>
                       <button
                         onClick={() => {
                           if (window.confirm(`¿Eliminar "${p.nombre}"?`)) removeMutation({ id: p._id });
                         }}
-                        title="Eliminar"
+                        aria-label="Eliminar prospecto"
                         className="text-[#484f58] hover:text-[#f87171] transition-colors"
                       >
                         <Trash2 size={13} />
