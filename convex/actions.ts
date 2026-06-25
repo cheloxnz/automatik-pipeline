@@ -2,7 +2,18 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
-const ACTOR_ID = "compass~crawler-google-places";
+const PLACES_URL = "https://places.googleapis.com/v1/places:searchText";
+const FIELDS = [
+  "places.displayName",
+  "places.formattedAddress",
+  "places.nationalPhoneNumber",
+  "places.internationalPhoneNumber",
+  "places.websiteUri",
+  "places.rating",
+  "places.userRatingCount",
+  "places.googleMapsUri",
+  "places.types",
+].join(",");
 
 export const searchBusinesses = action({
   args: {
@@ -13,79 +24,83 @@ export const searchBusinesses = action({
     soloSinWeb: v.boolean(),
   },
   handler: async (ctx, { nicho, ciudad, pais, cantidad, soloSinWeb }) => {
-    const apiKey = process.env.APIFY_API_KEY;
-    if (!apiKey) throw new Error("APIFY_API_KEY no configurada");
+    const apiKey = process.env.GOOGLE_PLACES_KEY;
+    if (!apiKey) throw new Error("GOOGLE_PLACES_KEY no configurada");
 
     const query = `${nicho} en ${ciudad} ${pais}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allItems: any[] = [];
 
-    // Iniciar run y esperar hasta 3 minutos
-    const runRes = await fetch(
-      `https://api.apify.com/v2/acts/${ACTOR_ID}/runs?waitForFinish=180`,
-      {
+    // Google Places devuelve hasta 20 por página, paginamos si se pide más
+    let pageToken: string | undefined;
+    const pages = Math.ceil(Math.min(cantidad, 60) / 20);
+
+    for (let i = 0; i < pages; i++) {
+      const body: Record<string, unknown> = {
+        textQuery: query,
+        languageCode: "es",
+        maxResultCount: 20,
+        ...(pageToken ? { pageToken } : {}),
+      };
+
+      const res = await fetch(PLACES_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
+          "X-Goog-Api-Key": apiKey,
+          "X-Goog-FieldMask": FIELDS,
         },
-        body: JSON.stringify({
-          searchStringsArray: [query],
-          maxCrawledPlacesPerSearch: cantidad,
-          language: "es",
-          countryCode: pais.toLowerCase().slice(0, 2),
-        }),
-      }
-    );
+        body: JSON.stringify(body),
+      });
 
-    if (!runRes.ok) {
-      const err = await runRes.text();
-      throw new Error(`Apify error: ${runRes.status} — ${err}`);
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(`Google Places error ${res.status}: ${err}`);
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const data: any = await res.json();
+      const places = data.places ?? [];
+      allItems.push(...places);
+      pageToken = data.nextPageToken;
+      if (!pageToken) break;
     }
 
-    const run = await runRes.json();
-    const datasetId = run.data?.defaultDatasetId;
-    if (!datasetId) throw new Error("Apify no devolvió dataset");
-
-    // Obtener resultados
-    const dataRes = await fetch(
-      `https://api.apify.com/v2/datasets/${datasetId}/items?limit=${cantidad}`,
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
+    // Filtrar: sin web, con teléfono, buenas reseñas
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items: any[] = await dataRes.json();
-
-    // Filtrar y mapear
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const filtered = items.filter((item: any) => {
-      if (soloSinWeb) return !item.website;
+    const filtered = allItems.filter((p: any) => {
+      if (soloSinWeb && p.websiteUri) return false;
+      if (!p.nationalPhoneNumber && !p.internationalPhoneNumber) return false;
       return true;
     });
 
+    // Ordenar por rating descendente
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const prospects = filtered.map((item: any) => ({
-      nombre: (item.title || item.name || "Sin nombre").slice(0, 200),
+    filtered.sort((a: any, b: any) => (b.rating ?? 0) - (a.rating ?? 0));
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prospects = filtered.map((p: any) => ({
+      nombre: p.displayName?.text ?? "Sin nombre",
       nicho,
       pais,
       ciudad,
-      telefono: item.phone || item.phoneUnformatted || undefined,
-      email: item.email || undefined,
-      urlPerfil: item.url || item.googlemapsUrl || undefined,
+      telefono: p.nationalPhoneNumber ?? p.internationalPhoneNumber ?? undefined,
+      email: undefined,
+      urlPerfil: p.googleMapsUri ?? undefined,
       notas: [
-        item.address ? `Dirección: ${item.address}` : "",
-        item.totalScore ? `Rating: ${item.totalScore}★` : "",
-        item.reviewsCount ? `${item.reviewsCount} reseñas` : "",
+        p.formattedAddress ? `Dirección: ${p.formattedAddress}` : "",
+        p.rating ? `Rating: ${p.rating}★ (${p.userRatingCount ?? 0} reseñas)` : "",
       ].filter(Boolean).join(" · ") || undefined,
     }));
 
-    if (prospects.length === 0) {
-      return { insertados: 0, encontrados: items.length, filtrados: filtered.length };
+    if (prospects.length > 0) {
+      await ctx.runMutation(api.prospects.bulkImport, { prospects });
     }
-
-    await ctx.runMutation(api.prospects.bulkImport, { prospects });
 
     return {
       insertados: prospects.length,
-      encontrados: items.length,
-      filtrados: filtered.length,
+      encontrados: allItems.length,
+      sinWebConTelefono: filtered.length,
     };
   },
 });
