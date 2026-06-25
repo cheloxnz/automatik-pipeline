@@ -1,9 +1,9 @@
 "use client";
 import { useState, useRef } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2 } from "lucide-react";
+import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2, ChevronDown } from "lucide-react";
 
 const NICHOS_SUGERIDOS = [
   "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",
@@ -43,14 +43,14 @@ function SearchModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <MapPin size={15} className="text-[#00ff9d]" />
-            <h2 className="font-medium text-[#e6edf3] text-sm">Buscar negocios en Google Maps</h2>
+            <h2 className="font-semibold text-[#e6edf3] text-sm tracking-wide">Buscar en Google Maps</h2>
           </div>
           <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
         </div>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Nicho / Rubro</label>
+            <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">Nicho / Rubro</label>
             <input
               value={nicho} onChange={(e) => setNicho(e.target.value)}
               placeholder="Ej: Spa, Peluquería, Veterinaria..."
@@ -59,7 +59,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
             <div className="flex flex-wrap gap-1.5 mt-2">
               {NICHOS_SUGERIDOS.slice(0, 8).map((n) => (
                 <button key={n} onClick={() => setNicho(n)}
-                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${nicho === n ? "border-[#00ff9d]/50 text-[#00ff9d] bg-[#00ff9d]/10" : "border-[#30363d] text-[#8b949e] hover:border-[#58a6ff]/50 hover:text-[#e6edf3]"}`}>
+                  className={`text-[10px] font-medium px-2 py-0.5 rounded-full border transition-colors ${nicho === n ? "border-[#00ff9d]/50 text-[#00ff9d] bg-[#00ff9d]/10" : "border-[#30363d] text-[#8b949e] hover:border-[#58a6ff]/50 hover:text-[#e6edf3]"}`}>
                   {n}
                 </button>
               ))}
@@ -68,13 +68,13 @@ function SearchModal({ onClose }: { onClose: () => void }) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Ciudad</label>
+              <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">Ciudad</label>
               <input value={ciudad} onChange={(e) => setCiudad(e.target.value)}
                 placeholder="Buenos Aires"
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]" />
             </div>
             <div>
-              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">País</label>
+              <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">País</label>
               <input value={pais} onChange={(e) => setPais(e.target.value)}
                 className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff]" />
             </div>
@@ -82,7 +82,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
 
           <div className="flex items-center justify-between">
             <div>
-              <label className="block text-[10px] text-[#8b949e] mb-1 uppercase tracking-wide">Cantidad de resultados</label>
+              <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">Cantidad</label>
               <select value={cantidad} onChange={(e) => setCantidad(Number(e.target.value))}
                 className="bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none">
                 {[10, 20, 30, 50].map((n) => <option key={n} value={n}>{n} negocios</option>)}
@@ -93,7 +93,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
                 className={`w-9 h-5 rounded-full transition-colors relative ${soloSinWeb ? "bg-[#00ff9d]/30" : "bg-[#30363d]"}`}>
                 <span className={`absolute top-0.5 w-4 h-4 rounded-full transition-all ${soloSinWeb ? "left-4 bg-[#00ff9d]" : "left-0.5 bg-[#8b949e]"}`} />
               </div>
-              <span className="text-[11px] text-[#8b949e]">Solo sin web</span>
+              <span className="text-[11px] font-medium text-[#8b949e]">Solo sin web</span>
             </label>
           </div>
 
@@ -106,7 +106,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
           {result && (
             <div className="bg-[#0d2b1f] border border-[#3fb950]/30 rounded-lg p-3">
               <p className="text-[11px] text-[#3fb950]">
-                ✓ {result.insertados} negocios agregados a Prospectos
+                ✓ <strong>{result.insertados}</strong> negocios agregados a Prospectos
                 {soloSinWeb && result.filtrados != null && ` (de ${result.encontrados} encontrados, ${result.encontrados - result.filtrados} tenían web)`}
               </p>
             </div>
@@ -115,18 +115,18 @@ function SearchModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex gap-2 mt-5">
           <button onClick={onClose}
-            className="flex-1 px-4 py-2 text-sm border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors">
+            className="flex-1 px-4 py-2 text-sm font-medium border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors">
             {result ? "Cerrar" : "Cancelar"}
           </button>
           <button onClick={handleSearch} disabled={loading || !nicho || !ciudad}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             {loading ? <><Loader2 size={13} className="animate-spin" /> Buscando...</> : <><Search size={13} /> Buscar</>}
           </button>
         </div>
 
         {loading && (
           <p className="text-[10px] text-[#8b949e] text-center mt-3">
-            Buscando en Google Maps... puede tardar 1-2 minutos
+            Consultando Google Maps... puede tardar 1-2 minutos
           </p>
         )}
       </div>
@@ -156,7 +156,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
-          <h2 className="font-medium text-[#e6edf3]">{title}</h2>
+          <h2 className="font-semibold text-[#e6edf3] text-base">{title}</h2>
           <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
         </div>
         {children}
@@ -170,7 +170,7 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
 }) {
   return (
     <div>
-      <label className="block text-[11px] text-[#8b949e] mb-1 uppercase tracking-wide">{label}</label>
+      <label className="block text-[10px] font-semibold text-[#8b949e] mb-1 uppercase tracking-widest">{label}</label>
       <input
         type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
         className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
@@ -180,7 +180,11 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
 }
 
 export default function Prospectos() {
-  const prospects = useQuery(api.prospects.list) ?? [];
+  const { results: prospects, status, loadMore } = usePaginatedQuery(
+    api.prospects.listPaginated,
+    {},
+    { initialNumItems: 100 }
+  );
   const totalStats = useQuery(api.prospects.stats);
   const createMutation = useMutation(api.prospects.create);
   const updateMutation = useMutation(api.prospects.update);
@@ -280,101 +284,122 @@ export default function Prospectos() {
     e.target.value = "";
   }
 
+  const total = totalStats?.total ?? 0;
+
   return (
     <div className="p-6">
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+
+      {/* Header */}
       <div className="flex items-center justify-between mb-5 border-b border-[#30363d] pb-4">
-        <h1 className="text-[11px] text-[#8b949e] uppercase tracking-[3px]">
-          Prospectos <span className="text-[#e6edf3] ml-2">{totalStats?.total ?? "..."}</span>
-        </h1>
+        <div>
+          <h1 className="text-lg font-bold text-[#e6edf3] tracking-tight">Prospectos</h1>
+          <p className="text-[11px] text-[#8b949e] mt-0.5">
+            {total > 0 ? <><span className="font-semibold text-[#58a6ff]">{total.toLocaleString()}</span> contactos en base</> : "Cargando..."}
+            {prospects.length < total && <span className="ml-2 text-[#484f58]">· mostrando {prospects.length}</span>}
+          </p>
+        </div>
         <div className="flex gap-2">
           <button
             onClick={async () => {
               const n = await removeSinContactoMutation({});
               alert(`${n} prospectos sin contacto eliminados`);
             }}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#d29922]/30 rounded-lg text-[#d29922] hover:bg-[#1f1a0a] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border border-[#d29922]/30 rounded-lg text-[#d29922] hover:bg-[#1f1a0a] transition-colors"
           >
-            <AlertTriangle size={13} /> Sin contacto
+            <AlertTriangle size={12} /> Sin contacto
           </button>
           <button
             onClick={async () => {
-              if (confirm(`¿Borrar los ${prospects.length} prospectos? Esta acción no se puede deshacer.`)) {
+              if (confirm(`¿Borrar los ${total} prospectos? Esta acción no se puede deshacer.`)) {
                 await removeAllMutation({});
               }
             }}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#f85149]/30 rounded-lg text-[#f85149] hover:bg-[#2d1313] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border border-[#f85149]/30 rounded-lg text-[#f85149] hover:bg-[#2d1313] transition-colors"
           >
-            <AlertTriangle size={13} /> Limpiar todo
+            <Trash2 size={12} /> Limpiar todo
           </button>
           <button
             onClick={() => fileRef.current?.click()}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
           >
-            <Upload size={13} /> Importar CSV
+            <Upload size={12} /> Importar CSV
           </button>
           <button
             onClick={() => setShowSearch(true)}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors"
           >
-            <MapPin size={13} /> Buscar en Maps
+            <MapPin size={12} /> Buscar en Maps
           </button>
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSV} />
           <button
             onClick={() => { setShowAdd(true); setForm(EMPTY); }}
-            className="flex items-center gap-2 px-3 py-1.5 text-xs bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors"
           >
-            <Plus size={13} /> Agregar
+            <Plus size={12} /> Agregar
           </button>
         </div>
       </div>
 
+      {/* Filtros */}
       <div className="flex gap-3 mb-4">
         <div className="relative flex-1">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8b949e]" />
           <input
             value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, nicho, país..."
+            placeholder="Buscar por nombre, nicho, ciudad..."
             className="w-full bg-[#161b22] border border-[#30363d] rounded-lg pl-8 pr-3 py-2 text-sm text-[#e6edf3] focus:outline-none focus:border-[#58a6ff] placeholder-[#484f58]"
           />
         </div>
         <select
           value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)}
-          className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none"
+          className="bg-[#161b22] border border-[#30363d] rounded-lg px-3 py-2 text-sm font-medium text-[#e6edf3] focus:outline-none"
         >
           <option value="todos">Todos los estados</option>
-          {ESTADOS.map((e) => <option key={e} value={e}>{e}</option>)}
+          {ESTADOS.map((e) => <option key={e} value={e}>{e.charAt(0).toUpperCase() + e.slice(1)}</option>)}
         </select>
       </div>
 
+      {/* Tabla */}
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="border-b border-[#30363d]">
-              {["Nombre", "Nicho", "País", "Ciudad", "Teléfono", "Email", "Estado", ""].map((h) => (
-                <th key={h} className="text-left text-[#8b949e] px-4 py-3 font-normal uppercase text-[10px] tracking-wide">{h}</th>
+            <tr className="border-b border-[#30363d] bg-[#0d1117]/60">
+              {[
+                { label: "Nombre del negocio", w: "w-[18%]" },
+                { label: "Rubro", w: "w-[12%]" },
+                { label: "País", w: "w-[8%]" },
+                { label: "Ciudad", w: "w-[10%]" },
+                { label: "Teléfono", w: "w-[12%]" },
+                { label: "Email", w: "w-[14%]" },
+                { label: "Estado", w: "w-[10%]" },
+                { label: "", w: "w-[6%]" },
+              ].map((h) => (
+                <th key={h.label} className={`text-left text-[#6e7681] px-4 py-3 font-bold uppercase text-[9px] tracking-widest ${h.w}`}>{h.label}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-[#8b949e] py-12">
-                {prospects.length === 0 ? "Sin prospectos — importá tu CSV o agregá uno manualmente" : "Sin resultados para ese filtro"}
+              <tr><td colSpan={8} className="text-center text-[#8b949e] py-16">
+                {prospects.length === 0
+                  ? <span>Sin prospectos — <span className="text-[#58a6ff] cursor-pointer" onClick={() => setShowSearch(true)}>buscá en Maps</span> o importá un CSV</span>
+                  : "Sin resultados para ese filtro"}
               </td></tr>
             ) : (
               filtered.map((p) => (
                 <tr key={p._id} className="border-b border-[#1c2128] hover:bg-[#21262d]/40 transition-colors">
-                  <td className="px-4 py-2.5 text-[#e6edf3] max-w-[160px] truncate">{p.nombre}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[120px] truncate">{p.nicho}</td>
+                  <td className="px-4 py-2.5 font-semibold text-[#e6edf3] max-w-[0] truncate">{p.nombre}</td>
+                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.nicho}</td>
                   <td className="px-4 py-2.5 text-[#8b949e]">{p.pais}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[100px] truncate">{p.ciudad}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e]">{p.telefono ?? "—"}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[140px] truncate">{p.email ?? "—"}</td>
+                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.ciudad}</td>
+                  <td className="px-4 py-2.5 font-mono text-[11px] text-[#8b949e]">{p.telefono ?? <span className="text-[#484f58]">—</span>}</td>
+                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.email ?? <span className="text-[#484f58]">—</span>}</td>
                   <td className="px-4 py-2.5">
                     <select
                       value={p.estado}
                       onChange={(e) => updateEstadoMutation({ id: p._id, estado: e.target.value })}
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-medium border-0 cursor-pointer focus:outline-none ${BADGE[p.estado] ?? BADGE.pendiente}`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer focus:outline-none ${BADGE[p.estado] ?? BADGE.pendiente}`}
                     >
                       {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -396,17 +421,32 @@ export default function Prospectos() {
         </table>
       </div>
 
-      {totalStats && totalStats.total > 500 && (
-        <p className="text-center text-[10px] text-[#484f58] mt-3">
-          Mostrando los 500 más recientes de {totalStats.total} totales
+      {/* Cargar más */}
+      {status === "CanLoadMore" && (
+        <div className="flex justify-center mt-5">
+          <button
+            onClick={() => loadMore(100)}
+            className="flex items-center gap-2 px-5 py-2 text-[12px] font-semibold border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] hover:border-[#58a6ff]/30 transition-all"
+          >
+            <ChevronDown size={14} />
+            Cargar 100 más
+            <span className="text-[#484f58] font-normal">({prospects.length} de {total.toLocaleString()})</span>
+          </button>
+        </div>
+      )}
+
+      {status === "Exhausted" && prospects.length > 0 && (
+        <p className="text-center text-[10px] text-[#484f58] mt-4">
+          Todos los {total.toLocaleString()} prospectos cargados
         </p>
       )}
 
+      {/* Modales */}
       {(showAdd || editId) && (
-        <Modal title={editId ? "Editar prospecto" : "Agregar prospecto"} onClose={() => { setShowAdd(false); setEditId(null); setForm(EMPTY); }}>
+        <Modal title={editId ? "Editar prospecto" : "Nuevo prospecto"} onClose={() => { setShowAdd(false); setEditId(null); setForm(EMPTY); }}>
           <div className="grid grid-cols-2 gap-3 mb-4">
             <FormField label="Nombre" value={form.nombre} onChange={field("nombre")} placeholder="Spa Relax" />
-            <FormField label="Nicho" value={form.nicho} onChange={field("nicho")} placeholder="Spa / Masajes" />
+            <FormField label="Rubro" value={form.nicho} onChange={field("nicho")} placeholder="Spa / Masajes" />
             <FormField label="País" value={form.pais} onChange={field("pais")} placeholder="Argentina" />
             <FormField label="Ciudad" value={form.ciudad} onChange={field("ciudad")} placeholder="Buenos Aires" />
             <FormField label="Teléfono" value={form.telefono} onChange={field("telefono")} placeholder="5491112345678" />
@@ -420,11 +460,11 @@ export default function Prospectos() {
           </div>
           <div className="flex gap-2 justify-end">
             <button onClick={() => { setShowAdd(false); setEditId(null); setForm(EMPTY); }}
-              className="px-4 py-2 text-sm text-[#8b949e] hover:text-[#e6edf3] transition-colors">
+              className="px-4 py-2 text-sm font-medium text-[#8b949e] hover:text-[#e6edf3] transition-colors">
               Cancelar
             </button>
             <button onClick={handleSave}
-              className="px-4 py-2 text-sm bg-[#00ff9d]/10 border border-[#00ff9d]/30 text-[#00ff9d] rounded-lg hover:bg-[#00ff9d]/20 transition-colors flex items-center gap-2">
+              className="px-4 py-2 text-sm font-semibold bg-[#00ff9d]/10 border border-[#00ff9d]/30 text-[#00ff9d] rounded-lg hover:bg-[#00ff9d]/20 transition-colors flex items-center gap-2">
               <Check size={14} /> Guardar
             </button>
           </div>
