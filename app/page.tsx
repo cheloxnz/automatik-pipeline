@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { Component, ReactNode, useState, useEffect } from "react";
 import {
   MessageSquare, Users, CheckCircle2, TrendingUp,
-  DollarSign, Zap, Activity, Phone,
+  DollarSign, Zap, Activity, Phone, ArrowRight,
 } from "lucide-react";
 
 /* ── Error Boundary ─────────────────────────────────── */
@@ -227,33 +227,79 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* ── Pipeline / Últimos 30 días ── */}
-      <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Pipeline · Últimos 30 días</p>
-      <div className="grid grid-cols-4 gap-3">
-        <MetricCard
-          label="Mensajes enviados"
-          value={stats.enviados.toString()}
-          sub={`${stats.total > 0 ? Math.round((stats.enviados / stats.total) * 100) : 0}% del total`}
-          icon={MessageSquare}
-        />
-        <MetricCard
-          label="Respuestas"
-          value={stats.respondieron.toString()}
-          sub={`Tasa respuesta: ${stats.tasaRespuesta}%`}
-          icon={TrendingUp}
-        />
-        <MetricCard
-          label="Reuniones / Interesados"
-          value={stats.respondieron.toString()}
-          sub={`${stats.respondieron} este período`}
-          icon={Users}
-        />
-        <MetricCard
-          label="Tasa de cierre"
-          value={`${stats.tasaConversion}%`}
-          sub={`${stats.cerrados} cierres / ${stats.enviados} enviados`}
-          icon={CheckCircle2}
-        />
+      {/* ── Funnel visual ── */}
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Funnel de conversión</p>
+        <div className="flex items-center gap-4">
+          <span className="text-[9px] text-[#8b949e]">
+            Respuesta <span className={`font-bold ml-1 ${stats.tasaRespuesta >= 15 ? "text-[#3fb950]" : stats.tasaRespuesta >= 5 ? "text-[#d29922]" : "text-[#f85149]"}`}>{stats.tasaRespuesta}%</span>
+          </span>
+          <span className="text-[9px] text-[#8b949e]">
+            Cierre <span className={`font-bold ml-1 ${stats.tasaConversion >= 10 ? "text-[#3fb950]" : stats.tasaConversion >= 3 ? "text-[#d29922]" : "text-[#f85149]"}`}>{stats.tasaConversion}%</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5">
+        {(() => {
+          const stages = [
+            { label: "Total leads", value: stats.total, color: "#484f58", icon: Users },
+            { label: "Enviados", value: stats.enviados, color: "#58a6ff", icon: MessageSquare },
+            { label: "Respondieron", value: stats.respondieron, color: "#d29922", icon: TrendingUp },
+            { label: "Cerrados", value: stats.cerrados, color: "#00ff9d", icon: CheckCircle2 },
+          ];
+          const max = Math.max(stats.total, 1);
+          return (
+            <div className="space-y-3">
+              {stages.map((s, i) => {
+                const pct = Math.max((s.value / max) * 100, s.value > 0 ? 2 : 0);
+                const dropPct = i > 0 && stages[i - 1].value > 0
+                  ? Math.round((s.value / stages[i - 1].value) * 100)
+                  : null;
+                const Icon = s.icon;
+                return (
+                  <div key={s.label}>
+                    <div className="flex items-center gap-3 mb-1">
+                      <Icon size={11} style={{ color: s.color }} className="shrink-0" />
+                      <span className="text-[10px] text-[#8b949e] w-28 shrink-0">{s.label}</span>
+                      <div className="flex-1 bg-[#161b22] rounded-full h-5 overflow-hidden relative">
+                        <div
+                          className="h-full rounded-full flex items-center pl-2.5 transition-all duration-700"
+                          style={{ width: `${pct}%`, backgroundColor: s.color + "26", borderLeft: `2px solid ${s.color}` }}
+                        />
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold" style={{ color: s.color }}>
+                          {s.value.toLocaleString()}
+                        </span>
+                      </div>
+                      {dropPct !== null ? (
+                        <span className={`text-[9px] font-bold w-12 text-right ${dropPct >= 20 ? "text-[#3fb950]" : dropPct >= 8 ? "text-[#d29922]" : "text-[#f85149]"}`}>
+                          {dropPct}%
+                        </span>
+                      ) : (
+                        <span className="w-12" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* drop labels */}
+              <div className="flex items-center gap-3 pt-1 border-t border-[#1c2128]">
+                <span className="text-[9px] text-[#484f58] w-[calc(28px+112px+12px)]">Conversión por etapa →</span>
+                <div className="flex-1 flex justify-around text-[9px] text-[#484f58]">
+                  {[
+                    stats.total > 0 ? `${Math.round((stats.enviados / stats.total) * 100)}% enviado` : "—",
+                    stats.enviados > 0 ? `${stats.tasaRespuesta}% respondió` : "—",
+                    stats.respondieron > 0 ? `${Math.round((stats.cerrados / stats.respondieron) * 100)}% cerrado` : "—",
+                  ].map((t, i) => (
+                    <span key={i} className="flex items-center gap-1">
+                      <ArrowRight size={8} className="text-[#484f58]" /> {t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Revenue ── */}
