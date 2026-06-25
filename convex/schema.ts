@@ -2,6 +2,12 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  campanaConfig: defineTable({
+    templateName: v.string(),
+    phoneId: v.string(),
+    limiteDiario: v.number(),
+    delayMs: v.number(),
+  }),
   prospects: defineTable({
     nombre: v.string(),
     nicho: v.string(),

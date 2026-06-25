@@ -159,6 +159,41 @@ export const removeAll = mutation({
   },
 });
 
+export const getById = query({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    return await ctx.db.get(id);
+  },
+});
+
+export const listByEstado = query({
+  args: { estado: v.string(), limite: v.number() },
+  handler: async (ctx, { estado, limite }) => {
+    return await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", estado))
+      .take(limite);
+  },
+});
+
+export const registrarRespuesta = mutation({
+  args: { telefono: v.string(), mensajeId: v.string(), texto: v.string() },
+  handler: async (ctx, { telefono, mensajeId, texto }) => {
+    // Buscar por teléfono (normalizado)
+    const all = await ctx.db.query("prospects").collect();
+    const prospect = all.find((p) => {
+      const t = (p.telefono ?? "").replace(/\D/g, "");
+      return t === telefono || t.endsWith(telefono.slice(-8));
+    });
+    if (!prospect) return null;
+    await ctx.db.patch(prospect._id, {
+      estado: "respondio",
+      notas: (prospect.notas ? prospect.notas + "\n" : "") + `Respondió: "${texto.slice(0, 120)}"`,
+    });
+    return prospect._id;
+  },
+});
+
 export const bulkImport = mutation({
   args: {
     prospects: v.array(
