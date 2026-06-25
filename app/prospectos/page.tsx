@@ -19,7 +19,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
   const [cantidad, setCantidad] = useState(20);
   const [soloSinWeb, setSoloSinWeb] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<{ insertados: number; encontrados: number; filtrados: number } | null>(null);
+  const [result, setResult] = useState<{ insertados: number; encontrados: number; sinWebConTelefono?: number; filtrados?: number } | null>(null);
   const [error, setError] = useState("");
 
   async function handleSearch() {
