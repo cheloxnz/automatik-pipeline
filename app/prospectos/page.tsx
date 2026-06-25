@@ -339,6 +339,9 @@ export default function Prospectos() {
   const [panelProspect, setPanelProspect] = useState<typeof prospects[0] | null>(null);
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [selected, setSelected] = useState<Set<Id<"prospects">>>(new Set());
+  const [bulkEstado, setBulkEstado] = useState("enviado");
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   const filtered = prospects.filter((p) => {
     const matchSearch = search === "" || [p.nombre, p.nicho, p.pais, p.ciudad].some((f) =>
@@ -366,6 +369,41 @@ export default function Prospectos() {
       setShowAdd(false);
     }
     setForm(EMPTY);
+  }
+
+  function toggleSelect(id: Id<"prospects">) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(filtered.map((p) => p._id)));
+    }
+  }
+
+  async function handleBulkEstado() {
+    setBulkLoading(true);
+    for (const id of selected) {
+      await updateEstadoMutation({ id, estado: bulkEstado });
+    }
+    setSelected(new Set());
+    setBulkLoading(false);
+  }
+
+  async function handleBulkDelete() {
+    if (!window.confirm(`¿Eliminar ${selected.size} prospectos? Esta acción no se puede deshacer.`)) return;
+    setBulkLoading(true);
+    for (const id of selected) {
+      await removeMutation({ id });
+    }
+    setSelected(new Set());
+    setBulkLoading(false);
   }
 
   function openEdit(p: typeof prospects[0]) {
@@ -498,30 +536,82 @@ export default function Prospectos() {
         </select>
       </div>
 
+      {/* Barra de bulk actions */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl shadow-black/60">
+          <span className="text-[11px] font-bold text-[#e6edf3]">{selected.size} seleccionados</span>
+          <div className="w-px h-4 bg-[#30363d]" />
+          <select
+            value={bulkEstado}
+            onChange={(e) => setBulkEstado(e.target.value)}
+            className="bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-[11px] text-[#e6edf3] focus:outline-none"
+          >
+            {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button
+            onClick={handleBulkEstado}
+            disabled={bulkLoading}
+            className="px-3 py-1 text-[11px] font-bold bg-[#0e1c35] border border-[#1e3a5f] text-[#60a5fa] rounded-lg hover:bg-[#1e3a5f]/40 transition-colors disabled:opacity-40"
+          >
+            {bulkLoading ? "Aplicando..." : "Cambiar estado"}
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkLoading}
+            className="px-3 py-1 text-[11px] font-bold bg-[#2a0e0e] border border-[#4a1a1a] text-[#f87171] rounded-lg hover:bg-[#4a1a1a]/40 transition-colors disabled:opacity-40"
+          >
+            Eliminar
+          </button>
+          <button
+            onClick={() => setSelected(new Set())}
+            className="text-[#484f58] hover:text-[#8b949e] transition-colors ml-1"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* Tabla */}
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
             <tr className="border-b border-[#21262d] bg-[#0d1117]">
-              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[36%]">Negocio</th>
+              <th className="px-4 py-3 w-[40px]">
+                <input
+                  type="checkbox"
+                  checked={filtered.length > 0 && selected.size === filtered.length}
+                  onChange={toggleSelectAll}
+                  className="accent-[#60a5fa] w-3.5 h-3.5 cursor-pointer"
+                />
+              </th>
+              <th className="text-left text-[#484f58] px-3 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[34%]">Negocio</th>
               <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[20%]">Ubicación</th>
-              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[14%]">Contacto</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[13%]">Contacto</th>
               <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[16%]">Estado</th>
-              <th className="w-[14%]" />
+              <th className="w-[13%]" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={5} className="text-center text-[#484f58] py-16 text-[12px]">
+              <tr><td colSpan={6} className="text-center text-[#484f58] py-16 text-[12px]">
                 {prospects.length === 0
                   ? <span>Sin prospectos — <span className="text-[#60a5fa] cursor-pointer hover:underline" onClick={() => setShowSearch(true)}>buscá en Maps</span> o importá un CSV</span>
                   : "Sin resultados para ese filtro"}
               </td></tr>
             ) : (
               filtered.map((p) => (
-                <tr key={p._id} className="border-b border-[#1c2128] hover:bg-[#1c2128]/60 transition-colors group">
+                <tr key={p._id} className={`border-b border-[#1c2128] hover:bg-[#1c2128]/60 transition-colors group ${selected.has(p._id) ? "bg-[#0e1c35]/40" : ""}`}>
+                  {/* Checkbox */}
+                  <td className="px-4 py-3 w-[40px]">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(p._id)}
+                      onChange={() => toggleSelect(p._id)}
+                      className="accent-[#60a5fa] w-3.5 h-3.5 cursor-pointer"
+                    />
+                  </td>
                   {/* Negocio: nombre prominente + nicho muted debajo */}
-                  <td className="px-4 py-3 max-w-[0]">
+                  <td className="px-3 py-3 max-w-[0]">
                     <button
                       onClick={() => setPanelProspect(p)}
                       className="font-semibold text-[#e6edf3] hover:text-[#60a5fa] transition-colors text-left truncate w-full block text-[13px] leading-tight"

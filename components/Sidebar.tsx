@@ -1,17 +1,39 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { LayoutDashboard, Users, Settings, Zap, Send } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const nav = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/prospectos", label: "Prospectos", icon: Users },
-  { href: "/campana", label: "Campaña", icon: Send },
-  { href: "/configuracion", label: "Configuración", icon: Settings },
-];
+const SEEN_KEY = "ap_seen_respondieron";
 
 export default function Sidebar() {
   const path = usePathname();
+  const stats = useQuery(api.prospects.stats);
+  const [seen, setSeen] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    return parseInt(localStorage.getItem(SEEN_KEY) ?? "0", 10);
+  });
+
+  const respondieron = stats?.respondieron ?? 0;
+  const unread = Math.max(0, respondieron - seen);
+
+  // Al entrar a /prospectos, marcar como visto
+  useEffect(() => {
+    if (path === "/prospectos" && respondieron > 0) {
+      localStorage.setItem(SEEN_KEY, String(respondieron));
+      setSeen(respondieron);
+    }
+  }, [path, respondieron]);
+
+  const nav = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
+    { href: "/prospectos", label: "Prospectos", icon: Users, badge: unread },
+    { href: "/campana", label: "Campaña", icon: Send, badge: 0 },
+    { href: "/configuracion", label: "Configuración", icon: Settings, badge: 0 },
+  ];
+
   return (
     <aside className="w-56 flex flex-col border-r border-[#30363d] bg-[#161b22] shrink-0">
       <div className="px-4 py-5 border-b border-[#30363d]">
@@ -22,7 +44,7 @@ export default function Sidebar() {
         <p className="text-[10px] text-[#8b949e] mt-0.5 ml-6">Pipeline CRM</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
-        {nav.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon, badge }) => {
           const active = path === href;
           return (
             <Link
@@ -35,7 +57,12 @@ export default function Sidebar() {
               }`}
             >
               <Icon size={16} />
-              {label}
+              <span className="flex-1">{label}</span>
+              {badge > 0 && (
+                <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-[#f59e0b] text-[#0d1117] text-[9px] font-bold flex items-center justify-center">
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
             </Link>
           );
         })}
