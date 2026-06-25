@@ -8,6 +8,15 @@ export default defineSchema({
     limiteDiario: v.number(),
     delayMs: v.number(),
   }),
+  conversaciones: defineTable({
+    telefono: v.string(),
+    prospectId: v.optional(v.id("prospects")),
+    // 1=preguntando nombre, 2=preguntando dolor, 3=completado
+    step: v.number(),
+    nombre: v.optional(v.string()),
+    dolor: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_telefono", ["telefono"]),
   prospects: defineTable({
     nombre: v.string(),
     nicho: v.string(),

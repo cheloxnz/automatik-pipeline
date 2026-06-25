@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 
 const http = httpRouter();
 
-// ── Verificación del webhook (Meta lo llama la primera vez) ───────────────
+// ── Verificación del webhook ───────────────────────────────────────────────
 http.route({
   path: "/webhook",
   method: "GET",
@@ -14,7 +14,7 @@ http.route({
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    const verifyToken = process.env.WA_VERIFY_TOKEN ?? "automatik2024";
+    const verifyToken = process.env.WA_VERIFY_TOKEN ?? "automatik2026";
 
     if (mode === "subscribe" && token === verifyToken) {
       return new Response(challenge, { status: 200 });
@@ -23,7 +23,7 @@ http.route({
   }),
 });
 
-// ── Recibir mensajes entrantes de WhatsApp ────────────────────────────────
+// ── Mensajes entrantes ────────────────────────────────────────────────────
 http.route({
   path: "/webhook",
   method: "POST",
@@ -32,29 +32,26 @@ http.route({
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const entry = (body as any).entry?.[0];
-      const changes = entry?.changes?.[0];
-      const value = changes?.value;
+      const value = (body as any).entry?.[0]?.changes?.[0]?.value;
 
-      // Ignorar status updates (solo nos interesan mensajes)
+      // Solo procesar mensajes entrantes (ignorar status updates)
       if (!value?.messages?.length) {
         return new Response("ok", { status: 200 });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const msg = value.messages[0] as any;
-      const fromRaw: string = msg.from ?? "";
+      const from: string = (msg.from ?? "").replace(/\D/g, "");
       const mensajeId: string = msg.id ?? "";
       const texto: string = msg.text?.body ?? msg.type ?? "";
 
-      // Normalizar: puede venir con o sin código país
-      const from = fromRaw.replace(/\D/g, "");
+      if (!from) return new Response("ok", { status: 200 });
 
-      // Guardar el mensaje entrante en Convex
-      await ctx.runMutation(api.prospects.registrarRespuesta, {
+      // Delegar al bot conversacional
+      await ctx.runAction(api.bot.procesarMensaje, {
         telefono: from,
-        mensajeId,
         texto,
+        mensajeId,
       });
     } catch {
       // No fallar el webhook aunque haya error interno
