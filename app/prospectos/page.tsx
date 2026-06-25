@@ -107,7 +107,7 @@ function SearchModal({ onClose }: { onClose: () => void }) {
             <div className="bg-[#0d2b1f] border border-[#3fb950]/30 rounded-lg p-3">
               <p className="text-[11px] text-[#3fb950]">
                 ✓ {result.insertados} negocios agregados a Prospectos
-                {soloSinWeb && ` (de ${result.encontrados} encontrados, ${result.encontrados - result.filtrados} tenían web)`}
+                {soloSinWeb && result.filtrados != null && ` (de ${result.encontrados} encontrados, ${result.encontrados - result.filtrados} tenían web)`}
               </p>
             </div>
           )}
