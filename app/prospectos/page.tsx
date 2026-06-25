@@ -136,12 +136,14 @@ function SearchModal({ onClose }: { onClose: () => void }) {
 
 const ESTADOS = ["pendiente", "enviado", "respondio", "cerrado", "error"];
 
+// Semantic state palette — OKLCH-derived, not GitHub Dark defaults
+// pendiente: slate neutral  enviado: sapphire  respondio: amber (needs attention)  cerrado: emerald  error: rose
 const BADGE: Record<string, string> = {
-  pendiente: "bg-[#21262d] text-[#8b949e]",
-  enviado: "bg-[#0d2b1f] text-[#3fb950]",
-  respondio: "bg-[#0c2040] text-[#58a6ff]",
-  cerrado: "bg-[#1f1a0a] text-[#d29922]",
-  error: "bg-[#2d1313] text-[#f85149]",
+  pendiente: "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
+  enviado:   "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
+  respondio: "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
+  cerrado:   "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
+  error:     "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
 
 type ProspectForm = {
@@ -180,11 +182,11 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
 }
 
 const BADGE_PANEL: Record<string, string> = {
-  pendiente: "bg-[#21262d] text-[#8b949e]",
-  enviado: "bg-[#0d2b1f] text-[#3fb950]",
-  respondio: "bg-[#0c2040] text-[#58a6ff]",
-  cerrado: "bg-[#1f1a0a] text-[#d29922]",
-  error: "bg-[#2d1313] text-[#f85149]",
+  pendiente: "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
+  enviado:   "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
+  respondio: "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
+  cerrado:   "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
+  error:     "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
 
 function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospects">; nombre: string; nicho: string; ciudad: string; pais: string; telefono?: string; email?: string; urlPerfil?: string; notas?: string; estado: string; monto?: number; fechaEnvio?: string; createdAt: number }; onClose: () => void }) {
@@ -500,42 +502,67 @@ export default function Prospectos() {
       <div className="bg-[#161b22] border border-[#30363d] rounded-xl overflow-hidden">
         <table className="w-full text-[12px]">
           <thead>
-            <tr className="border-b border-[#30363d] bg-[#0d1117]/60">
-              {[
-                { label: "Nombre del negocio", w: "w-[18%]" },
-                { label: "Rubro", w: "w-[12%]" },
-                { label: "País", w: "w-[8%]" },
-                { label: "Ciudad", w: "w-[10%]" },
-                { label: "Teléfono", w: "w-[12%]" },
-                { label: "Email", w: "w-[14%]" },
-                { label: "Estado", w: "w-[10%]" },
-                { label: "", w: "w-[6%]" },
-              ].map((h) => (
-                <th key={h.label} className={`text-left text-[#adbac7] px-4 py-3 font-extrabold uppercase text-[10px] tracking-widest ${h.w}`}>{h.label}</th>
-              ))}
+            <tr className="border-b border-[#21262d] bg-[#0d1117]">
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[36%]">Negocio</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[20%]">Ubicación</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[14%]">Contacto</th>
+              <th className="text-left text-[#484f58] px-4 py-3 font-bold uppercase text-[9px] tracking-[3px] w-[16%]">Estado</th>
+              <th className="w-[14%]" />
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-[#8b949e] py-16">
+              <tr><td colSpan={5} className="text-center text-[#484f58] py-16 text-[12px]">
                 {prospects.length === 0
-                  ? <span>Sin prospectos — <span className="text-[#58a6ff] cursor-pointer" onClick={() => setShowSearch(true)}>buscá en Maps</span> o importá un CSV</span>
+                  ? <span>Sin prospectos — <span className="text-[#60a5fa] cursor-pointer hover:underline" onClick={() => setShowSearch(true)}>buscá en Maps</span> o importá un CSV</span>
                   : "Sin resultados para ese filtro"}
               </td></tr>
             ) : (
               filtered.map((p) => (
-                <tr key={p._id} className="border-b border-[#1c2128] hover:bg-[#21262d]/40 transition-colors">
-                  <td className="px-4 py-2.5 max-w-[0] truncate">
-                    <button onClick={() => setPanelProspect(p)} className="font-semibold text-[#e6edf3] hover:text-[#58a6ff] transition-colors text-left truncate w-full">
+                <tr key={p._id} className="border-b border-[#1c2128] hover:bg-[#1c2128]/60 transition-colors group">
+                  {/* Negocio: nombre prominente + nicho muted debajo */}
+                  <td className="px-4 py-3 max-w-[0]">
+                    <button
+                      onClick={() => setPanelProspect(p)}
+                      className="font-semibold text-[#e6edf3] hover:text-[#60a5fa] transition-colors text-left truncate w-full block text-[13px] leading-tight"
+                    >
                       {p.nombre}
                     </button>
+                    <span className="text-[10px] text-[#484f58] truncate block mt-0.5">{p.nicho}</span>
                   </td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.nicho}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e]">{p.pais}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.ciudad}</td>
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-[#8b949e]">{p.telefono ?? <span className="text-[#484f58]">—</span>}</td>
-                  <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.email ?? <span className="text-[#484f58]">—</span>}</td>
-                  <td className="px-4 py-2.5">
+                  {/* Ubicación: ciudad + país en una celda */}
+                  <td className="px-4 py-3 max-w-[0]">
+                    <span className="text-[#8b949e] truncate block text-[12px]">{p.ciudad}</span>
+                    <span className="text-[10px] text-[#484f58]">{p.pais}</span>
+                  </td>
+                  {/* Contacto: íconos compactos */}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      {p.telefono ? (
+                        <span title={p.telefono} className="flex items-center gap-1 text-[#60a5fa] font-mono text-[10px]">
+                          <Phone size={10} className="shrink-0" />
+                          <span className="hidden xl:inline truncate max-w-[80px]">{p.telefono.replace(/\D/g,'').slice(-8)}</span>
+                        </span>
+                      ) : (
+                        <span className="text-[#2d3139]"><Phone size={10} /></span>
+                      )}
+                      {p.email ? (
+                        <span title={p.email} className="text-[#34d399]">
+                          <MessageCircle size={10} />
+                        </span>
+                      ) : (
+                        <span className="text-[#2d3139]"><MessageCircle size={10} /></span>
+                      )}
+                      {p.urlPerfil && (
+                        <a href={p.urlPerfil} target="_blank" rel="noopener noreferrer"
+                          title="Ver en Maps" className="text-[#484f58] hover:text-[#f59e0b] transition-colors">
+                          <ExternalLink size={10} />
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  {/* Estado: badge semántico clickeable */}
+                  <td className="px-4 py-3">
                     <select
                       value={p.estado}
                       onChange={(e) => {
@@ -546,17 +573,31 @@ export default function Prospectos() {
                           updateEstadoMutation({ id: p._id, estado: e.target.value });
                         }
                       }}
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer focus:outline-none ${BADGE[p.estado] ?? BADGE.pendiente}`}
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full cursor-pointer focus:outline-none appearance-none ${BADGE[p.estado] ?? BADGE.pendiente}`}
                     >
                       {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex gap-2">
-                      <button onClick={() => openEdit(p)} className="text-[#8b949e] hover:text-[#58a6ff] transition-colors">
+                  {/* Acciones */}
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => setPanelProspect(p)}
+                        title="Ver conversación"
+                        className="text-[#484f58] hover:text-[#60a5fa] transition-colors"
+                      >
+                        <MessageCircle size={13} />
+                      </button>
+                      <button onClick={() => openEdit(p)} title="Editar" className="text-[#484f58] hover:text-[#60a5fa] transition-colors">
                         <Edit2 size={13} />
                       </button>
-                      <button onClick={() => removeMutation({ id: p._id })} className="text-[#8b949e] hover:text-[#f85149] transition-colors">
+                      <button
+                        onClick={() => {
+                          if (window.confirm(`¿Eliminar "${p.nombre}"?`)) removeMutation({ id: p._id });
+                        }}
+                        title="Eliminar"
+                        className="text-[#484f58] hover:text-[#f87171] transition-colors"
+                      >
                         <Trash2 size={13} />
                       </button>
                     </div>
