@@ -23,6 +23,27 @@ export const recent = query({
   },
 });
 
+const PAISES_CONOCIDOS = [
+  "Argentina", "Uruguay", "Chile", "Paraguay", "Bolivia",
+  "Peru", "Ecuador", "Colombia", "Mexico", "Venezuela",
+  "Brasil", "Panama", "Costa Rica", "Guatemala", "Honduras",
+];
+
+export const statsByPais = query({
+  args: {},
+  handler: async (ctx) => {
+    const result: { pais: string; total: number }[] = [];
+    for (const pais of PAISES_CONOCIDOS) {
+      const docs = await ctx.db
+        .query("prospects")
+        .withIndex("by_pais", (q) => q.eq("pais", pais))
+        .collect();
+      if (docs.length > 0) result.push({ pais, total: docs.length });
+    }
+    return result.sort((a, b) => b.total - a.total);
+  },
+});
+
 export const byEstado = query({
   args: { estado: v.string() },
   handler: async (ctx, { estado }) => {

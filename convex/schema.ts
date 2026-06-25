@@ -18,5 +18,6 @@ export default defineSchema({
   })
     .index("by_estado", ["estado"])
     .index("by_nicho", ["nicho"])
+    .index("by_pais", ["pais"])
     .index("by_createdAt", ["createdAt"]),
 });

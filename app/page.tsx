@@ -161,9 +161,10 @@ const COSTO_SISTEMA = 30;
 function DashboardContent() {
   const stats = useQuery(api.prospects.stats);
   const allProspects = useQuery(api.prospects.recent);
+  const porPais = useQuery(api.prospects.statsByPais);
   const [phoneLabel] = useState("+54 9 11 4085-4065");
 
-  if (!stats || !allProspects) {
+  if (!stats || !allProspects || porPais === undefined) {
     return (
       <div className="flex items-center justify-center h-full gap-3">
         <Activity size={16} className="text-[#00ff9d] animate-pulse" />
@@ -305,6 +306,38 @@ function DashboardContent() {
             {nichosArr.map(([name, { total, contactados }]) => (
               <NichoTile key={name} name={name} total={total} contactados={contactados} />
             ))}
+          </div>
+        </>
+      )}
+
+      {/* ── Por País ── */}
+      {porPais && porPais.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Cobertura por País</p>
+            <p className="text-[9px] text-[#8b949e]">{porPais.length} países con prospectos</p>
+          </div>
+          <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-4">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              {porPais.map(({ pais, total }) => {
+                const pct = stats.total > 0 ? Math.round((total / stats.total) * 100) : 0;
+                return (
+                  <div key={pais} className="flex items-center gap-3">
+                    <div className="w-28 shrink-0">
+                      <span className="text-[11px] font-semibold text-[#e6edf3]">{pais}</span>
+                    </div>
+                    <div className="flex-1 bg-[#161b22] rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="h-full bg-[#00ff9d]/60 rounded-full transition-all duration-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[11px] font-bold text-[#e6edf3] w-12 text-right">{total.toLocaleString()}</span>
+                    <span className="text-[9px] text-[#484f58] w-8 text-right">{pct}%</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </>
       )}
