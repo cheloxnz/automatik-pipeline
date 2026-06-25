@@ -99,7 +99,7 @@ function MetricCard({
         <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">{label}</p>
         {Icon && <Icon size={13} className="text-[#8b949e]" />}
       </div>
-      <p className={`text-4xl font-medium tracking-tight ${accent ? "text-[#00ff9d]" : "text-[#e6edf3]"}`}>
+      <p className={`font-medium tracking-tight ${accent ? "text-5xl text-[#00ff9d]" : "text-4xl text-[#e6edf3]"}`}>
         {value}
       </p>
       {sub && <p className="text-[10px] text-[#8b949e]">{sub}</p>}
@@ -143,7 +143,7 @@ function NichoTile({ name, total, contactados }: { name: string; total: number; 
       </div>
       <p className="text-[11px] text-[#e6edf3] font-medium mb-1 leading-tight">{name}</p>
       <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-medium text-[#e6edf3]">{total}</span>
+        <span className="text-3xl font-medium text-[#e6edf3]">{total}</span>
         <span className="text-[9px] text-[#8b949e]">leads</span>
       </div>
       <div className="mt-2 bg-[#21262d] rounded-full h-1">
@@ -216,14 +216,22 @@ function DashboardContent() {
         </div>
       </div>
 
-      {/* ── Bot Cards ── */}
+      {/* ── Bot + Quick Stats ── */}
       <div className="grid grid-cols-3 gap-3">
         <BotCard phoneId="1185795881287585" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} />
-        <div className="bg-[#0d1117] border border-[#30363d]/40 rounded-xl p-4 flex items-center justify-center">
-          <p className="text-[10px] text-[#484f58] tracking-widest uppercase">Bot 2 — No configurado</p>
+        <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5 flex flex-col justify-between">
+          <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Respondieron</p>
+          <div>
+            <p className={`text-5xl font-medium tracking-tight ${stats.respondieron > 0 ? "text-[#f59e0b]" : "text-[#484f58]"}`}>{stats.respondieron}</p>
+            <p className="text-[10px] text-[#8b949e] mt-1">tasa {stats.tasaRespuesta}%</p>
+          </div>
         </div>
-        <div className="bg-[#0d1117] border border-[#30363d]/40 rounded-xl p-4 flex items-center justify-center">
-          <p className="text-[10px] text-[#484f58] tracking-widest uppercase">Bot 3 — No configurado</p>
+        <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-5 flex flex-col justify-between">
+          <p className="text-[9px] text-[#8b949e] uppercase tracking-[3px]">Cerrados</p>
+          <div>
+            <p className={`text-5xl font-medium tracking-tight ${stats.cerrados > 0 ? "text-[#34d399]" : "text-[#484f58]"}`}>{stats.cerrados}</p>
+            <p className="text-[10px] text-[#8b949e] mt-1">conversión {stats.tasaConversion}%</p>
+          </div>
         </div>
       </div>
 
@@ -262,7 +270,7 @@ function DashboardContent() {
                     <div className="flex items-center gap-3 mb-1">
                       <Icon size={11} style={{ color: s.color }} className="shrink-0" />
                       <span className="text-[10px] text-[#8b949e] w-28 shrink-0">{s.label}</span>
-                      <div className="flex-1 bg-[#161b22] rounded-full h-5 overflow-hidden relative">
+                      <div className="flex-1 bg-[#161b22] rounded-full h-7 overflow-hidden relative">
                         <div
                           className="h-full rounded-full flex items-center pl-2.5 transition-all duration-700"
                           style={{ width: `${pct}%`, backgroundColor: s.color + "26", borderLeft: `2px solid ${s.color}` }}
