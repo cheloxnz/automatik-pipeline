@@ -160,7 +160,7 @@ const COSTO_SISTEMA = 30;
 
 function DashboardContent() {
   const stats = useQuery(api.prospects.stats);
-  const allProspects = useQuery(api.prospects.list);
+  const allProspects = useQuery(api.prospects.recent);
   const [phoneLabel] = useState("+54 9 11 4085-4065");
 
   if (!stats || !allProspects) {

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2 } from "lucide-react";
@@ -180,7 +180,12 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
 }
 
 export default function Prospectos() {
-  const prospects = useQuery(api.prospects.list) ?? [];
+  const { results: prospects, status, loadMore } = usePaginatedQuery(
+    api.prospects.listPaginated,
+    {},
+    { initialNumItems: 100 }
+  );
+  const totalStats = useQuery(api.prospects.stats);
   const createMutation = useMutation(api.prospects.create);
   const updateMutation = useMutation(api.prospects.update);
   const removeMutation = useMutation(api.prospects.remove);
@@ -284,7 +289,7 @@ export default function Prospectos() {
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
       <div className="flex items-center justify-between mb-5 border-b border-[#30363d] pb-4">
         <h1 className="text-[11px] text-[#8b949e] uppercase tracking-[3px]">
-          Prospectos <span className="text-[#e6edf3] ml-2">{prospects.length}</span>
+          Prospectos <span className="text-[#e6edf3] ml-2">{totalStats?.total ?? "..."}</span>
         </h1>
         <div className="flex gap-2">
           <button
@@ -394,6 +399,17 @@ export default function Prospectos() {
           </tbody>
         </table>
       </div>
+
+      {status === "CanLoadMore" && (
+        <div className="flex justify-center mt-4">
+          <button
+            onClick={() => loadMore(100)}
+            className="px-4 py-2 text-xs border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:bg-[#21262d] transition-colors"
+          >
+            Cargar más ({prospects.length} de {totalStats?.total ?? "..."})
+          </button>
+        </div>
+      )}
 
       {(showAdd || editId) && (
         <Modal title={editId ? "Editar prospecto" : "Agregar prospecto"} onClose={() => { setShowAdd(false); setEditId(null); setForm(EMPTY); }}>

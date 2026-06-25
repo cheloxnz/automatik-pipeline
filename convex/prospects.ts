@@ -1,10 +1,25 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("prospects").order("desc").collect();
+    return await ctx.db.query("prospects").order("desc").take(200);
+  },
+});
+
+export const listPaginated = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    return await ctx.db.query("prospects").order("desc").paginate(args.paginationOpts);
+  },
+});
+
+export const recent = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("prospects").order("desc").take(20);
   },
 });
 
