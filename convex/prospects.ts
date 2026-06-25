@@ -69,6 +69,8 @@ export const stats = query({
     const nCerrados = cerrados.length;
     const nErrores = errores.length;
     const total = nPendientes + nEnviados + nRespondieron + nCerrados + nErrores;
+    const ingresoReal = cerrados.reduce((sum, p) => sum + (p.monto ?? 0), 0);
+    const ticketPromedio = nCerrados > 0 ? Math.round(ingresoReal / nCerrados) : 0;
 
     return {
       total,
@@ -77,6 +79,8 @@ export const stats = query({
       cerrados: nCerrados,
       errores: nErrores,
       pendientes: nPendientes,
+      ingresoReal,
+      ticketPromedio,
       tasaRespuesta: nEnviados > 0 ? Math.round((nRespondieron / nEnviados) * 100) : 0,
       tasaConversion: nEnviados > 0 ? Math.round((nCerrados / nEnviados) * 100) : 0,
     };
@@ -99,6 +103,17 @@ export const create = mutation({
       ...args,
       estado: "pendiente",
       createdAt: Date.now(),
+    });
+  },
+});
+
+export const cerrarTrato = mutation({
+  args: { id: v.id("prospects"), monto: v.number() },
+  handler: async (ctx, { id, monto }) => {
+    await ctx.db.patch(id, {
+      estado: "cerrado",
+      monto,
+      fechaEnvio: new Date().toISOString(),
     });
   },
 });

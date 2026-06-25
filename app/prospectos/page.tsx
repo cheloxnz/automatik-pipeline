@@ -191,6 +191,7 @@ export default function Prospectos() {
   const removeMutation = useMutation(api.prospects.remove);
   const bulkImportMutation = useMutation(api.prospects.bulkImport);
   const updateEstadoMutation = useMutation(api.prospects.updateEstado);
+  const cerrarTratoMutation = useMutation(api.prospects.cerrarTrato);
   const removeAllMutation = useMutation(api.prospects.removeAll);
   const removeSinContactoMutation = useMutation(api.prospects.removeSinContacto);
 
@@ -199,6 +200,8 @@ export default function Prospectos() {
   const [showAdd, setShowAdd] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [editId, setEditId] = useState<Id<"prospects"> | null>(null);
+  const [cerrandoId, setCerrandoId] = useState<Id<"prospects"> | null>(null);
+  const [monto, setMonto] = useState("");
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -398,7 +401,14 @@ export default function Prospectos() {
                   <td className="px-4 py-2.5">
                     <select
                       value={p.estado}
-                      onChange={(e) => updateEstadoMutation({ id: p._id, estado: e.target.value })}
+                      onChange={(e) => {
+                        if (e.target.value === "cerrado") {
+                          setCerrandoId(p._id);
+                          setMonto("");
+                        } else {
+                          updateEstadoMutation({ id: p._id, estado: e.target.value });
+                        }
+                      }}
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer focus:outline-none ${BADGE[p.estado] ?? BADGE.pendiente}`}
                     >
                       {ESTADOS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -439,6 +449,42 @@ export default function Prospectos() {
         <p className="text-center text-[10px] text-[#484f58] mt-4">
           Todos los {total.toLocaleString()} prospectos cargados
         </p>
+      )}
+
+      {/* Modal cierre de trato */}
+      {cerrandoId && (
+        <Modal title="💰 Cerrar trato" onClose={() => setCerrandoId(null)}>
+          <p className="text-[12px] text-[#8b949e] mb-4">¿Cuánto pagó este cliente? (en USD)</p>
+          <div className="flex items-center gap-2 mb-5">
+            <span className="text-[#8b949e] text-sm font-bold">USD</span>
+            <input
+              type="number"
+              value={monto}
+              onChange={(e) => setMonto(e.target.value)}
+              placeholder="500"
+              autoFocus
+              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-lg font-bold text-[#00ff9d] focus:outline-none focus:border-[#00ff9d] placeholder-[#484f58]"
+            />
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => setCerrandoId(null)}
+              className="px-4 py-2 text-sm font-medium text-[#8b949e] hover:text-[#e6edf3] transition-colors">
+              Cancelar
+            </button>
+            <button
+              onClick={async () => {
+                const m = parseFloat(monto);
+                if (!isNaN(m) && m >= 0) {
+                  await cerrarTratoMutation({ id: cerrandoId, monto: m });
+                  setCerrandoId(null);
+                }
+              }}
+              disabled={!monto || isNaN(parseFloat(monto))}
+              className="px-4 py-2 text-sm font-bold bg-[#00ff9d]/10 border border-[#00ff9d]/30 text-[#00ff9d] rounded-lg hover:bg-[#00ff9d]/20 transition-colors flex items-center gap-2 disabled:opacity-40">
+              <Check size={14} /> Confirmar cierre
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* Modales */}

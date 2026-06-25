@@ -173,8 +173,10 @@ function DashboardContent() {
     );
   }
 
-  /* derived */
-  const ingresos = stats.cerrados * TICKET;
+  /* derived — usa ingresos reales si hay cierres con monto, sino estimado */
+  const ingresoReal = stats.ingresoReal ?? 0;
+  const ingresos = ingresoReal > 0 ? ingresoReal : stats.cerrados * TICKET;
+  const ticketPromedio = stats.ticketPromedio && stats.ticketPromedio > 0 ? stats.ticketPromedio : TICKET;
   const roi = ingresos > 0 ? Math.round(ingresos / COSTO_SISTEMA) : 0;
   const cac = stats.cerrados > 0 ? (COSTO_SISTEMA / stats.cerrados).toFixed(2) : "—";
   const costoPorLead = stats.total > 0 ? (COSTO_SISTEMA / stats.total).toFixed(2) : "—";
@@ -259,7 +261,7 @@ function DashboardContent() {
         <MetricCard
           label="Ingresos generados"
           value={`USD ${ingresos.toLocaleString()}`}
-          sub={`${stats.cerrados} clientes cerrados · ticket USD ${TICKET}`}
+          sub={`${stats.cerrados} clientes · ticket prom. USD ${ticketPromedio.toLocaleString()}`}
           accent
           icon={DollarSign}
           detail={[

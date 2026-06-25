@@ -27,6 +27,7 @@ export default defineSchema({
     urlPerfil: v.optional(v.string()),
     notas: v.optional(v.string()),
     estado: v.string(),
+    monto: v.optional(v.number()),
     fechaEnvio: v.optional(v.string()),
     mensajeId: v.optional(v.string()),
     createdAt: v.number(),
