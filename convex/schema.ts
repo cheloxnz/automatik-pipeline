@@ -11,10 +11,16 @@ export default defineSchema({
   conversaciones: defineTable({
     telefono: v.string(),
     prospectId: v.optional(v.id("prospects")),
-    // 1=preguntando nombre, 2=preguntando dolor, 3=completado
     step: v.number(),
     nombre: v.optional(v.string()),
     dolor: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_telefono", ["telefono"]),
+  mensajes: defineTable({
+    telefono: v.string(),
+    prospectId: v.optional(v.id("prospects")),
+    texto: v.string(),
+    tipo: v.string(), // "entrante" | "saliente"
     createdAt: v.number(),
   }).index("by_telefono", ["telefono"]),
   prospects: defineTable({

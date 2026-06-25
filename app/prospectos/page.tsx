@@ -3,7 +3,7 @@ import { useState, useRef } from "react";
 import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2, ChevronDown } from "lucide-react";
+import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2, ChevronDown, MessageCircle, ExternalLink, Phone } from "lucide-react";
 
 const NICHOS_SUGERIDOS = [
   "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",
@@ -179,6 +179,138 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
   );
 }
 
+const BADGE_PANEL: Record<string, string> = {
+  pendiente: "bg-[#21262d] text-[#8b949e]",
+  enviado: "bg-[#0d2b1f] text-[#3fb950]",
+  respondio: "bg-[#0c2040] text-[#58a6ff]",
+  cerrado: "bg-[#1f1a0a] text-[#d29922]",
+  error: "bg-[#2d1313] text-[#f85149]",
+};
+
+function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospects">; nombre: string; nicho: string; ciudad: string; pais: string; telefono?: string; email?: string; urlPerfil?: string; notas?: string; estado: string; monto?: number; fechaEnvio?: string; createdAt: number }; onClose: () => void }) {
+  const mensajes = useQuery(api.prospects.getMensajes, { telefono: prospect.telefono ?? "" });
+
+  function formatHora(ts: number) {
+    return new Date(ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  }
+  function formatFecha(ts: number) {
+    return new Date(ts).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  }
+
+  return (
+    <>
+      {/* Overlay */}
+      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+
+      {/* Panel */}
+      <div className="fixed right-0 top-0 h-full w-[420px] bg-[#161b22] border-l border-[#30363d] z-50 flex flex-col shadow-2xl">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d] shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#00ff9d]/10 border border-[#00ff9d]/20 flex items-center justify-center text-sm font-bold text-[#00ff9d]">
+              {prospect.nombre.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="font-bold text-[#e6edf3] text-sm leading-tight">{prospect.nombre}</p>
+              <p className="text-[10px] text-[#8b949e]">{prospect.nicho} · {prospect.ciudad}</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-[#8b949e] hover:text-[#e6edf3] transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Info rápida */}
+        <div className="px-5 py-3 border-b border-[#30363d] shrink-0 space-y-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${BADGE_PANEL[prospect.estado] ?? BADGE_PANEL.pendiente}`}>
+              {prospect.estado}
+            </span>
+            {prospect.monto != null && prospect.monto > 0 && (
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-[#00ff9d]/10 text-[#00ff9d]">
+                USD {prospect.monto.toLocaleString()}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
+            {prospect.telefono && (
+              <span className="flex items-center gap-1.5"><Phone size={11} /> {prospect.telefono}</span>
+            )}
+            {prospect.urlPerfil && (
+              <a href={prospect.urlPerfil} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-1.5 hover:text-[#58a6ff] transition-colors">
+                <ExternalLink size={11} /> Maps
+              </a>
+            )}
+          </div>
+          {prospect.notas && (
+            <p className="text-[10px] text-[#8b949e] bg-[#0d1117] rounded-lg px-3 py-2 leading-relaxed">
+              {prospect.notas}
+            </p>
+          )}
+        </div>
+
+        {/* Chat */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3"
+          style={{ backgroundImage: "radial-gradient(circle at 1px 1px, #1c2128 1px, transparent 0)", backgroundSize: "24px 24px" }}>
+
+          {mensajes === undefined && (
+            <div className="flex justify-center mt-8">
+              <Loader2 size={20} className="text-[#484f58] animate-spin" />
+            </div>
+          )}
+
+          {mensajes?.length === 0 && (
+            <div className="flex flex-col items-center mt-12 gap-2">
+              <MessageCircle size={32} className="text-[#30363d]" />
+              <p className="text-[11px] text-[#484f58]">Sin mensajes aún</p>
+            </div>
+          )}
+
+          {mensajes && mensajes.length > 0 && (() => {
+            let lastDate = "";
+            return mensajes.map((m) => {
+              const fecha = formatFecha(m.createdAt);
+              const showDate = fecha !== lastDate;
+              lastDate = fecha;
+              const saliente = m.tipo === "saliente";
+              return (
+                <div key={m._id}>
+                  {showDate && (
+                    <div className="flex justify-center my-2">
+                      <span className="text-[9px] text-[#484f58] bg-[#0d1117] px-2 py-0.5 rounded-full">{fecha}</span>
+                    </div>
+                  )}
+                  <div className={`flex ${saliente ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-[78%] rounded-2xl px-3 py-2 shadow-sm ${
+                      saliente
+                        ? "bg-[#00ff9d]/10 border border-[#00ff9d]/20 rounded-tr-sm"
+                        : "bg-[#21262d] border border-[#30363d] rounded-tl-sm"
+                    }`}>
+                      <p className="text-[12px] text-[#e6edf3] leading-relaxed whitespace-pre-wrap">{m.texto}</p>
+                      <p className={`text-[9px] mt-1 text-right ${saliente ? "text-[#00ff9d]/50" : "text-[#484f58]"}`}>
+                        {formatHora(m.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            });
+          })()}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-[#30363d] shrink-0">
+          <p className="text-[10px] text-[#484f58] text-center">
+            Respondé desde tu WhatsApp personal · El bot maneja el flujo automáticamente
+          </p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function Prospectos() {
   const { results: prospects, status, loadMore } = usePaginatedQuery(
     api.prospects.listPaginated,
@@ -202,6 +334,7 @@ export default function Prospectos() {
   const [editId, setEditId] = useState<Id<"prospects"> | null>(null);
   const [cerrandoId, setCerrandoId] = useState<Id<"prospects"> | null>(null);
   const [monto, setMonto] = useState("");
+  const [panelProspect, setPanelProspect] = useState<typeof prospects[0] | null>(null);
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -392,7 +525,11 @@ export default function Prospectos() {
             ) : (
               filtered.map((p) => (
                 <tr key={p._id} className="border-b border-[#1c2128] hover:bg-[#21262d]/40 transition-colors">
-                  <td className="px-4 py-2.5 font-semibold text-[#e6edf3] max-w-[0] truncate">{p.nombre}</td>
+                  <td className="px-4 py-2.5 max-w-[0] truncate">
+                    <button onClick={() => setPanelProspect(p)} className="font-semibold text-[#e6edf3] hover:text-[#58a6ff] transition-colors text-left truncate w-full">
+                      {p.nombre}
+                    </button>
+                  </td>
                   <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.nicho}</td>
                   <td className="px-4 py-2.5 text-[#8b949e]">{p.pais}</td>
                   <td className="px-4 py-2.5 text-[#8b949e] max-w-[0] truncate">{p.ciudad}</td>
@@ -449,6 +586,11 @@ export default function Prospectos() {
         <p className="text-center text-[10px] text-[#484f58] mt-4">
           Todos los {total.toLocaleString()} prospectos cargados
         </p>
+      )}
+
+      {/* Panel lateral conversación */}
+      {panelProspect && (
+        <ConversacionPanel prospect={panelProspect} onClose={() => setPanelProspect(null)} />
       )}
 
       {/* Modal cierre de trato */}

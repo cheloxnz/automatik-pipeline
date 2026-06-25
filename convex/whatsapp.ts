@@ -84,6 +84,15 @@ export const enviarMensaje = action({
       mensajeId: result.ok ? result.mensajeId : result.error,
     });
 
+    if (result.ok) {
+      await ctx.runMutation(api.prospects.guardarMensaje, {
+        telefono: prospect.telefono!,
+        prospectId: args.prospectId,
+        texto: `[Template: ${args.templateName}] Hola ${prospect.nombre}! Vi el negocio que tienen en ${prospect.ciudad}...`,
+        tipo: "saliente",
+      });
+    }
+
     return result;
   },
 });

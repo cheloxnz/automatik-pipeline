@@ -174,6 +174,29 @@ export const removeAll = mutation({
   },
 });
 
+export const getMensajes = query({
+  args: { telefono: v.string() },
+  handler: async (ctx, { telefono }) => {
+    return await ctx.db
+      .query("mensajes")
+      .withIndex("by_telefono", (q) => q.eq("telefono", telefono))
+      .order("asc")
+      .collect();
+  },
+});
+
+export const guardarMensaje = mutation({
+  args: {
+    telefono: v.string(),
+    prospectId: v.optional(v.id("prospects")),
+    texto: v.string(),
+    tipo: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("mensajes", { ...args, createdAt: Date.now() });
+  },
+});
+
 export const getById = query({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
