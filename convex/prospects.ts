@@ -214,6 +214,26 @@ export const listByEstado = query({
   },
 });
 
+export const listByEstadoFiltrado = query({
+  args: {
+    estado: v.string(),
+    limite: v.number(),
+    nichos: v.array(v.string()),
+    paises: v.array(v.string()),
+  },
+  handler: async (ctx, { estado, limite, nichos, paises }) => {
+    let results = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", estado))
+      .collect();
+
+    if (nichos.length > 0) results = results.filter((p) => nichos.includes(p.nicho));
+    if (paises.length > 0) results = results.filter((p) => paises.includes(p.pais));
+
+    return results.slice(0, limite);
+  },
+});
+
 export const registrarRespuesta = mutation({
   args: { telefono: v.string(), mensajeId: v.string(), texto: v.string() },
   handler: async (ctx, { telefono, mensajeId, texto }) => {

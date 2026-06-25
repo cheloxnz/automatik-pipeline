@@ -10,6 +10,7 @@
 
 import type * as actions from "../actions.js";
 import type * as bot from "../bot.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as prospects from "../prospects.js";
 import type * as whatsapp from "../whatsapp.js";
@@ -23,6 +24,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
   bot: typeof bot;
+  crons: typeof crons;
   http: typeof http;
   prospects: typeof prospects;
   whatsapp: typeof whatsapp;

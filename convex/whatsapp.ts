@@ -97,55 +97,105 @@ export const enviarMensaje = action({
   },
 });
 
-// ── Lanzar campaña ────────────────────────────────────────────────────────
+// ── Helper: enviar un lote de prospectos ──────────────────────────────────
+async function enviarLoteInterno(
+  ctx: { runQuery: Function; runMutation: Function },
+  limite: number,
+  templateName: string,
+  phoneId: string,
+  token: string,
+  delayMs: number,
+  nichosFilter?: string[],
+  paisesFilter?: string[],
+): Promise<{ enviados: number; errores: number; total: number }> {
+  const pendientes = await ctx.runQuery(api.prospects.listByEstadoFiltrado, {
+    estado: "pendiente",
+    limite,
+    nichos: nichosFilter ?? [],
+    paises: paisesFilter ?? [],
+  });
+
+  if (pendientes.length === 0) return { enviados: 0, errores: 0, total: 0 };
+
+  let enviados = 0;
+  let errores = 0;
+
+  for (const p of pendientes) {
+    if (!p.telefono) { errores++; continue; }
+
+    const result = await sendTemplate(p.telefono, p.nombre, p.ciudad, templateName, phoneId, token);
+
+    await ctx.runMutation(api.prospects.updateEstado, {
+      id: p._id,
+      estado: result.ok ? "enviado" : "error",
+      fechaEnvio: result.ok ? new Date().toISOString() : undefined,
+      mensajeId: result.ok ? result.mensajeId : result.error,
+    });
+
+    if (result.ok) {
+      enviados++;
+      await ctx.runMutation(api.prospects.guardarMensaje, {
+        telefono: p.telefono,
+        prospectId: p._id,
+        texto: `[Template: ${templateName}] Hola ${p.nombre}! Vi el negocio que tienen en ${p.ciudad}...`,
+        tipo: "saliente",
+      });
+    } else {
+      errores++;
+    }
+
+    if (delayMs > 0) await new Promise((r) => setTimeout(r, delayMs));
+  }
+
+  return { enviados, errores, total: pendientes.length };
+}
+
+// ── Lanzar campaña manual ─────────────────────────────────────────────────
 export const lanzarCampana = action({
   args: {
     limite: v.number(),
     templateName: v.string(),
     phoneId: v.string(),
     delayMs: v.optional(v.number()),
+    nichosFilter: v.optional(v.array(v.string())),
+    paisesFilter: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args): Promise<{ enviados: number; errores: number; total: number }> => {
     const token = process.env.WA_TOKEN;
     if (!token) throw new Error("WA_TOKEN no configurado. Ejecutá: npx convex env set WA_TOKEN 'tu_token'");
+    return enviarLoteInterno(ctx, args.limite, args.templateName, args.phoneId, token, args.delayMs ?? 3000, args.nichosFilter, args.paisesFilter);
+  },
+});
 
-    const delay = args.delayMs ?? 3000;
-    const pendientes = await ctx.runQuery(api.prospects.listByEstado, {
-      estado: "pendiente",
-      limite: args.limite,
-    });
+// ── Enviar lote automático (llamado por el cron) ──────────────────────────
+export const enviarLoteCron = action({
+  args: {},
+  handler: async (ctx): Promise<{ skip: boolean; enviados?: number; errores?: number }> => {
+    // Solo enviar entre 13:00 y 23:00 UTC (10am-8pm Argentina UTC-3)
+    const hora = new Date().getUTCHours();
+    if (hora < 13 || hora >= 23) return { skip: true };
 
-    if (pendientes.length === 0) return { enviados: 0, errores: 0, total: 0 };
+    const token = process.env.WA_TOKEN;
+    if (!token) return { skip: true };
 
-    let enviados = 0;
-    let errores = 0;
+    const config = await ctx.runQuery(api.whatsapp.getConfig);
+    if (!config || !config.cronActivo) return { skip: true };
 
-    for (const p of pendientes) {
-      if (!p.telefono) { errores++; continue; }
+    // 20 slots en 10 horas (cada 30 min) → limiteDiario / 20 por slot
+    const porSlot = Math.max(1, Math.ceil(config.limiteDiario / 20));
 
-      const result = await sendTemplate(
-        p.telefono,
-        p.nombre,
-        p.ciudad,
-        args.templateName,
-        args.phoneId,
-        token,
-      );
+    const result = await enviarLoteInterno(
+      ctx,
+      porSlot,
+      config.templateName,
+      config.phoneId,
+      token,
+      config.delayMs,
+      config.nichosFilter,
+      config.paisesFilter,
+    );
 
-      await ctx.runMutation(api.prospects.updateEstado, {
-        id: p._id,
-        estado: result.ok ? "enviado" : "error",
-        fechaEnvio: result.ok ? new Date().toISOString() : undefined,
-        mensajeId: result.ok ? result.mensajeId : result.error,
-      });
-
-      if (result.ok) enviados++;
-      else errores++;
-
-      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
-    }
-
-    return { enviados, errores, total: pendientes.length };
+    return { skip: false, ...result };
   },
 });
 
@@ -156,6 +206,9 @@ export const saveConfig = mutation({
     phoneId: v.string(),
     limiteDiario: v.number(),
     delayMs: v.number(),
+    nichosFilter: v.optional(v.array(v.string())),
+    paisesFilter: v.optional(v.array(v.string())),
+    cronActivo: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const existing = await ctx.db.query("campanaConfig").first();

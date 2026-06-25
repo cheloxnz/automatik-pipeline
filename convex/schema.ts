@@ -7,6 +7,9 @@ export default defineSchema({
     phoneId: v.string(),
     limiteDiario: v.number(),
     delayMs: v.number(),
+    nichosFilter: v.optional(v.array(v.string())),
+    paisesFilter: v.optional(v.array(v.string())),
+    cronActivo: v.optional(v.boolean()),
   }),
   conversaciones: defineTable({
     telefono: v.string(),
