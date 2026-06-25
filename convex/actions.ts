@@ -2,7 +2,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
-const ACTOR_ID = "compass~google-maps-scraper";
+const ACTOR_ID = "compass~crawler-google-places";
 
 export const searchBusinesses = action({
   args: {
