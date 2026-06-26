@@ -91,7 +91,7 @@ function MetricCard({
   icon?: typeof MessageSquare; detail?: { label: string; value: string }[];
 }) {
   return (
-    <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col gap-2">
+    <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col gap-2 h-full">
       <div className="flex items-center justify-between">
         <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">{label}</p>
         {Icon && <Icon size={13} className="text-(--color-text-muted)" />}
@@ -208,15 +208,17 @@ function DashboardContent() {
 
       {/* ── Bot + Quick Stats ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <BotCard phoneId="1185795881287585" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} spark={sparkData ?? []} />
-        <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between">
+        <div className="animate-card-in" style={{ "--i": "0" } as React.CSSProperties}>
+          <BotCard phoneId="1185795881287585" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} spark={sparkData ?? []} />
+        </div>
+        <div className="animate-card-in bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between" style={{ "--i": "1" } as React.CSSProperties}>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Respondieron</p>
           <div>
             <p className={`text-5xl font-medium tracking-tight ${stats.respondieron > 0 ? "text-[#f59e0b]" : "text-(--color-text-faint)"}`}>{stats.respondieron}</p>
             <p className="text-[10px] text-(--color-text-muted) mt-1">tasa {stats.tasaRespuesta}%</p>
           </div>
         </div>
-        <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between">
+        <div className="animate-card-in bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between" style={{ "--i": "2" } as React.CSSProperties}>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Cerrados</p>
           <div>
             <p className={`text-5xl font-medium tracking-tight ${stats.cerrados > 0 ? "text-[#34d399]" : "text-(--color-text-faint)"}`}>{stats.cerrados}</p>
@@ -302,39 +304,45 @@ function DashboardContent() {
 
       {/* ── Revenue ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <MetricCard
-          label="Ingresos generados"
-          value={`USD ${ingresos.toLocaleString()}`}
-          sub={`${stats.cerrados} clientes · ticket prom. USD ${ticketPromedio.toLocaleString()}`}
-          accent
-          icon={DollarSign}
-          detail={[
-            { label: "Clientes cerrados", value: stats.cerrados.toString() },
-            { label: "Ticket promedio", value: `USD ${TICKET}` },
-            { label: "Inversión total", value: `USD ${COSTO_SISTEMA}` },
-            { label: "Profit neto", value: `USD ${profitNeto.toLocaleString()}` },
-          ]}
-        />
-        <MetricCard
-          label="CAC"
-          value={`USD ${cac}`}
-          sub="Costo por adquisición"
-          icon={Activity}
-          detail={[
-            { label: "Costo / Lead", value: `USD ${costoPorLead}` },
-            { label: "Costo / Reunión", value: `USD ${costoPorReunion}` },
-          ]}
-        />
-        <MetricCard
-          label="ROI"
-          value={`${roi}x`}
-          sub={`${roi > 0 ? (roi * 100).toLocaleString() + "%" : "0%"} retorno sobre inversión`}
-          icon={Zap}
-          detail={[
-            { label: "Por cada USD 1", value: `USD ${roi}` },
-            { label: "Payback", value: roi > 0 ? "+1 día" : "—" },
-          ]}
-        />
+        {[
+          {
+            label: "Ingresos generados",
+            value: `USD ${ingresos.toLocaleString()}`,
+            sub: `${stats.cerrados} clientes · ticket prom. USD ${ticketPromedio.toLocaleString()}`,
+            accent: true as const,
+            icon: DollarSign,
+            detail: [
+              { label: "Clientes cerrados", value: stats.cerrados.toString() },
+              { label: "Ticket promedio", value: `USD ${TICKET}` },
+              { label: "Inversión total", value: `USD ${COSTO_SISTEMA}` },
+              { label: "Profit neto", value: `USD ${profitNeto.toLocaleString()}` },
+            ],
+          },
+          {
+            label: "CAC",
+            value: `USD ${cac}`,
+            sub: "Costo por adquisición",
+            icon: Activity,
+            detail: [
+              { label: "Costo / Lead", value: `USD ${costoPorLead}` },
+              { label: "Costo / Reunión", value: `USD ${costoPorReunion}` },
+            ],
+          },
+          {
+            label: "ROI",
+            value: `${roi}x`,
+            sub: `${roi > 0 ? (roi * 100).toLocaleString() + "%" : "0%"} retorno sobre inversión`,
+            icon: Zap,
+            detail: [
+              { label: "Por cada USD 1", value: `USD ${roi}` },
+              { label: "Payback", value: roi > 0 ? "+1 día" : "—" },
+            ],
+          },
+        ].map((card, i) => (
+          <div key={card.label} className="animate-card-in" style={{ "--i": String(i + 3) } as React.CSSProperties}>
+            <MetricCard {...card} />
+          </div>
+        ))}
       </div>
 
       {/* ── Nichos ── */}

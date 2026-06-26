@@ -1,5 +1,60 @@
 @import "tailwindcss";
 
+/* ── Easing ── */
+:root {
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-out-expo:  cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Keyframes ── */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@keyframes slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+@keyframes scale-in {
+  from { transform: scale(0.96); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+@keyframes card-in {
+  from { transform: translateY(8px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
+
+/* ── Animation classes ── */
+.animate-slide-in-right {
+  animation: slide-in-right 300ms var(--ease-out-expo) both;
+}
+.animate-slide-up {
+  animation: slide-up 220ms var(--ease-out-quart) both;
+}
+.animate-scale-in {
+  animation: scale-in 180ms var(--ease-out-quart) both;
+}
+.animate-card-in {
+  animation: card-in 350ms var(--ease-out-quart) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+.animate-overlay {
+  animation: fade-in 200ms ease both;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @theme {
   /* Surface */
   --color-base: #0d1117;

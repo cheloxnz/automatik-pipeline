@@ -38,8 +38,8 @@ function SearchModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Buscar en Google Maps">
-      <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-md p-6 shadow-2xl">
+    <div className="animate-overlay fixed inset-0 bg-black/70 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label="Buscar en Google Maps">
+      <div className="animate-scale-in bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
             <MapPin size={15} className="text-[#00ff9d]" />
@@ -155,8 +155,8 @@ const EMPTY: ProspectForm = { nombre: "", nicho: "", pais: "", ciudad: "", telef
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-lg p-6 shadow-2xl">
+    <div className="animate-overlay fixed inset-0 bg-black/60 flex items-center justify-center z-50" role="dialog" aria-modal="true" aria-label={title}>
+      <div className="animate-scale-in bg-[#161b22] border border-[#30363d] rounded-xl w-full max-w-lg p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-semibold text-[#e6edf3] text-base">{title}</h2>
           <button onClick={onClose} aria-label="Cerrar" className="text-[#8b949e] hover:text-[#e6edf3]"><X size={18} /></button>
@@ -202,10 +202,10 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
   return (
     <>
       {/* Overlay */}
-      <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+      <div className="animate-overlay fixed inset-0 bg-black/40 z-40" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[#161b22] border-l border-[#30363d] z-50 flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label={`Conversación con ${prospect.nombre}`}>
+      <div className="animate-slide-in-right fixed right-0 top-0 h-full w-full sm:w-[420px] bg-[#161b22] border-l border-[#30363d] z-50 flex flex-col shadow-2xl" role="dialog" aria-modal="true" aria-label={`Conversación con ${prospect.nombre}`}>
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#30363d] shrink-0">
@@ -538,7 +538,7 @@ export default function Prospectos() {
 
       {/* Barra de bulk actions */}
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl shadow-black/60">
+        <div className="animate-slide-up fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 bg-[#161b22] border border-[#30363d] rounded-2xl shadow-2xl shadow-black/60">
           <span className="text-[11px] font-bold text-[#e6edf3]">{selected.size} seleccionados</span>
           <div className="w-px h-4 bg-[#30363d]" />
           <select
