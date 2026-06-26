@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConvexProvider client={convex}>
           <div className="flex h-screen bg-[#0d1117] text-[#e6edf3] overflow-hidden">
             <Sidebar />
-            <main className="flex-1 overflow-auto">{children}</main>
+            <main className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
           </div>
         </ConvexProvider>
       </body>

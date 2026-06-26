@@ -29,6 +29,39 @@ const PAISES_CONOCIDOS = [
   "Brasil", "Panama", "Costa Rica", "Guatemala", "Honduras",
 ];
 
+export const enviosPorDia = query({
+  args: {},
+  handler: async (ctx) => {
+    const hace15Dias = Date.now() - 15 * 24 * 60 * 60 * 1000;
+    const enviados = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", "enviado"))
+      .collect();
+    const respondieron = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", "respondio"))
+      .collect();
+    const cerrados = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", "cerrado"))
+      .collect();
+    const todos = [...enviados, ...respondieron, ...cerrados]
+      .filter((p) => p.fechaEnvio && new Date(p.fechaEnvio).getTime() > hace15Dias);
+    const counts: Record<string, number> = {};
+    for (let i = 14; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const key = d.toISOString().slice(0, 10);
+      counts[key] = 0;
+    }
+    for (const p of todos) {
+      if (!p.fechaEnvio) continue;
+      const key = new Date(p.fechaEnvio).toISOString().slice(0, 10);
+      if (key in counts) counts[key]++;
+    }
+    return Object.values(counts);
+  },
+});
+
 export const statsByNicho = query({
   args: {},
   handler: async (ctx) => {
