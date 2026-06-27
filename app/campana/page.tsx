@@ -8,18 +8,18 @@ import {
   Calendar, ToggleLeft, ToggleRight, Filter,
 } from "lucide-react";
 
-const TEMPLATE_DEFAULT = "automatik_prospecto";
+const TEMPLATE_DEFAULT = "automatik_prospecto_v2";
 const PHONE_ID_DEFAULT = "1185795881287585";
 
-const TEMPLATE_PREVIEW = `Hola {{1}}! 👋
+const TEMPLATE_PREVIEW = `Hola {{1}} 👋
 
-Vi el negocio que tienen en {{2}} y me quedé con ganas de consultarles algo.
+Vi que tienen su negocio en {{2}}. Les escribo porque ayudamos a negocios como el suyo a automatizar tareas con IA — atención por WhatsApp, agendamiento, seguimiento de clientes.
 
-¿Están aprovechando bien las redes sociales para atraer clientes nuevos? Trabajo con negocios de varios rubros y tengo una propuesta que creo puede interesarles.
+¿Es algo que les interesaría explorar? Si quieren, coordinamos 30 minutos para ver qué tiene sentido en su caso.
 
-Si tienen 5 minutitos, con gusto les cuento.
+Saludos, Marcelo - Automatik Media
 
-Saludos, Marcelo`;
+[ Agendar 30 minutos → ]`;
 
 const NICHOS_DISPONIBLES = [
   "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",

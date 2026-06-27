@@ -16,6 +16,28 @@ async function sendTemplate(
 ): Promise<SendResult> {
   const tel = telefono.replace(/\D/g, "");
 
+  // v2 templates have a CTA button component; v1 (automatik_prospecto) don't
+  const hasCtaButton = templateName === "automatik_prospecto_v2";
+
+  const components: object[] = [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: nombre },
+        { type: "text", text: ciudad },
+      ],
+    },
+  ];
+
+  if (hasCtaButton) {
+    components.push({
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [],
+    });
+  }
+
   const res = await fetch(`${WA_API}/${phoneId}/messages`, {
     method: "POST",
     headers: {
@@ -28,16 +50,8 @@ async function sendTemplate(
       type: "template",
       template: {
         name: templateName,
-        language: { code: "en" },
-        components: [
-          {
-            type: "body",
-            parameters: [
-              { type: "text", text: nombre },
-              { type: "text", text: ciudad },
-            ],
-          },
-        ],
+        language: { code: "es" },
+        components,
       },
     }),
   });
