@@ -160,7 +160,7 @@ function DashboardContent() {
   const nichosData = useQuery(api.prospects.statsByNicho);
   const porPais = useQuery(api.prospects.statsByPais);
   const sparkData = useQuery(api.prospects.enviosPorDia);
-  const [phoneLabel] = useState("+54 9 11 4085-4065");
+  const [phoneLabel] = useState("+54 9 11 6507-1385");
 
   if (!stats || nichosData === undefined || porPais === undefined) {
     return (
