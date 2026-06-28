@@ -209,7 +209,7 @@ function DashboardContent() {
       {/* ── Bot + Quick Stats ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="animate-card-in" style={{ "--i": "0" } as React.CSSProperties}>
-          <BotCard phoneId="1185795881287585" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} spark={sparkData ?? []} />
+          <BotCard phoneId="1236307326213120" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} spark={sparkData ?? []} />
         </div>
         <div className="animate-card-in bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between" style={{ "--i": "1" } as React.CSSProperties}>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Respondieron</p>

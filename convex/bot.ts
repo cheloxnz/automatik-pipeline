@@ -99,7 +99,7 @@ export const procesarMensaje = action({
   },
   handler: async (ctx, { telefono, texto, mensajeId }): Promise<void> => {
     const token = process.env.WA_TOKEN;
-    const phoneId = process.env.WA_PHONE_ID ?? "1185795881287585";
+    const phoneId = process.env.WA_PHONE_ID ?? "1236307326213120";
     const adminPhone = process.env.ADMIN_PHONE; // tu número personal
 
     if (!token) return;

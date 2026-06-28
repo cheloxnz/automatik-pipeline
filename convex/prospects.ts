@@ -27,26 +27,19 @@ const PAISES_CONOCIDOS = [
   "Argentina", "Uruguay", "Chile", "Paraguay", "Bolivia",
   "Peru", "Ecuador", "Colombia", "Mexico", "Venezuela",
   "Brasil", "Panama", "Costa Rica", "Guatemala", "Honduras",
+  "España",
 ];
 
 export const enviosPorDia = query({
   args: {},
   handler: async (ctx) => {
     const hace15Dias = Date.now() - 15 * 24 * 60 * 60 * 1000;
-    const enviados = await ctx.db
-      .query("prospects")
-      .withIndex("by_estado", (q) => q.eq("estado", "enviado"))
-      .collect();
-    const respondieron = await ctx.db
-      .query("prospects")
-      .withIndex("by_estado", (q) => q.eq("estado", "respondio"))
-      .collect();
-    const cerrados = await ctx.db
-      .query("prospects")
-      .withIndex("by_estado", (q) => q.eq("estado", "cerrado"))
-      .collect();
-    const todos = [...enviados, ...respondieron, ...cerrados]
-      .filter((p) => p.fechaEnvio && new Date(p.fechaEnvio).getTime() > hace15Dias);
+    const all = await ctx.db.query("prospects").collect();
+    const todos = all.filter(
+      (p) => p.fechaEnvio &&
+        ["enviado", "respondio", "cerrado"].includes(p.estado) &&
+        new Date(p.fechaEnvio).getTime() > hace15Dias
+    );
     const counts: Record<string, number> = {};
     for (let i = 14; i >= 0; i--) {
       const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
@@ -82,15 +75,15 @@ export const statsByNicho = query({
 export const statsByPais = query({
   args: {},
   handler: async (ctx) => {
-    const result: { pais: string; total: number }[] = [];
-    for (const pais of PAISES_CONOCIDOS) {
-      const docs = await ctx.db
-        .query("prospects")
-        .withIndex("by_pais", (q) => q.eq("pais", pais))
-        .collect();
-      if (docs.length > 0) result.push({ pais, total: docs.length });
+    const all = await ctx.db.query("prospects").collect();
+    const counts: Record<string, number> = {};
+    for (const p of all) {
+      if (!p.pais) continue;
+      counts[p.pais] = (counts[p.pais] ?? 0) + 1;
     }
-    return result.sort((a, b) => b.total - a.total);
+    return Object.entries(counts)
+      .map(([pais, total]) => ({ pais, total }))
+      .sort((a, b) => b.total - a.total);
   },
 });
 
@@ -107,21 +100,18 @@ export const byEstado = query({
 export const stats = query({
   args: {},
   handler: async (ctx) => {
-    const pendientes = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "pendiente")).collect();
-    const enviados = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "enviado")).collect();
-    const respondieron = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "respondio")).collect();
-    const cerrados = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "cerrado")).collect();
-    const errores = await ctx.db.query("prospects").withIndex("by_estado", (q) => q.eq("estado", "error")).collect();
-
-    const nPendientes = pendientes.length;
-    const nEnviados = enviados.length;
-    const nRespondieron = respondieron.length;
-    const nCerrados = cerrados.length;
-    const nErrores = errores.length;
-    const total = nPendientes + nEnviados + nRespondieron + nCerrados + nErrores;
-    const ingresoReal = cerrados.reduce((sum, p) => sum + (p.monto ?? 0), 0);
+    const all = await ctx.db.query("prospects").collect();
+    let nPendientes = 0, nEnviados = 0, nRespondieron = 0, nCerrados = 0, nErrores = 0;
+    let ingresoReal = 0;
+    for (const p of all) {
+      if (p.estado === "pendiente") nPendientes++;
+      else if (p.estado === "enviado") nEnviados++;
+      else if (p.estado === "respondio") nRespondieron++;
+      else if (p.estado === "cerrado") { nCerrados++; ingresoReal += p.monto ?? 0; }
+      else if (p.estado === "error") nErrores++;
+    }
+    const total = all.length;
     const ticketPromedio = nCerrados > 0 ? Math.round(ingresoReal / nCerrados) : 0;
-
     return {
       total,
       enviados: nEnviados,

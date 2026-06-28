@@ -4,7 +4,7 @@ import { Save, Eye, EyeOff } from "lucide-react";
 
 export default function Configuracion() {
   const [token, setToken] = useState("");
-  const [phoneId, setPhoneId] = useState("1185795881287585");
+  const [phoneId, setPhoneId] = useState("1236307326213120");
   const [ticket, setTicket] = useState("500");
   const [showToken, setShowToken] = useState(false);
   const [saved, setSaved] = useState(false);

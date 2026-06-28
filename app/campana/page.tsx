@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 
 const TEMPLATE_DEFAULT = "automatik_prospecto_v2";
-const PHONE_ID_DEFAULT = "1185795881287585";
+const PHONE_ID_DEFAULT = "1236307326213120";
 
 const TEMPLATE_PREVIEW = `Hola {{1}} 👋
 
