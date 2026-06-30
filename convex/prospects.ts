@@ -229,6 +229,14 @@ export const removeAll = mutation({
 export const getMensajes = query({
   args: { telefono: v.string() },
   handler: async (ctx, { telefono }) => {
+    const normalized = telefono.replace(/\D/g, "");
+    // Try normalized first, then original
+    const byNorm = await ctx.db
+      .query("mensajes")
+      .withIndex("by_telefono", (q) => q.eq("telefono", normalized))
+      .order("asc")
+      .collect();
+    if (byNorm.length > 0) return byNorm;
     return await ctx.db
       .query("mensajes")
       .withIndex("by_telefono", (q) => q.eq("telefono", telefono))
