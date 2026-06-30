@@ -226,6 +226,17 @@ export const removeAll = mutation({
   },
 });
 
+export const countEnviadosDesde = query({
+  args: { desde: v.string() },
+  handler: async (ctx, { desde }) => {
+    const docs = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", "enviado"))
+      .collect();
+    return docs.filter((p) => p.fechaEnvio && p.fechaEnvio >= desde).length;
+  },
+});
+
 export const getMensajes = query({
   args: { telefono: v.string() },
   handler: async (ctx, { telefono }) => {

@@ -183,8 +183,16 @@ export const enviarLoteCron = action({
     const config = await ctx.runQuery(api.whatsapp.getConfig);
     if (!config || !config.cronActivo) return { skip: true };
 
-    // 20 slots en 10 horas (cada 30 min) → limiteDiario / 20 por slot
-    const porSlot = Math.max(1, Math.ceil(config.limiteDiario / 20));
+    // Contar cuántos se enviaron hoy (desde medianoche UTC-3)
+    const hoyAR = new Date();
+    hoyAR.setUTCHours(hoyAR.getUTCHours() - 3); // ajustar a AR
+    const inicioHoy = hoyAR.toISOString().slice(0, 10) + "T00:00:00.000Z";
+    const enviadosHoy = await ctx.runQuery(api.prospects.countEnviadosDesde, { desde: inicioHoy });
+    const restantes = config.limiteDiario - enviadosHoy;
+    if (restantes <= 0) return { skip: true };
+
+    // 20 slots en 10 horas (cada 30 min) → limiteDiario / 20 por slot, sin pasar del restante
+    const porSlot = Math.min(restantes, Math.max(1, Math.ceil(config.limiteDiario / 20)));
 
     const result = await enviarLoteInterno(
       ctx,
