@@ -10,8 +10,14 @@ export const list = query({
 });
 
 export const listPaginated = query({
-  args: { paginationOpts: paginationOptsValidator },
+  args: { paginationOpts: paginationOptsValidator, estado: v.optional(v.string()) },
   handler: async (ctx, args) => {
+    if (args.estado && args.estado !== "todos") {
+      return await ctx.db.query("prospects")
+        .withIndex("by_estado", (q) => q.eq("estado", args.estado!))
+        .order("desc")
+        .paginate(args.paginationOpts);
+    }
     return await ctx.db.query("prospects").order("desc").paginate(args.paginationOpts);
   },
 });

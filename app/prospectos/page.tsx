@@ -316,7 +316,7 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
 export default function Prospectos() {
   const { results: prospects, status, loadMore } = usePaginatedQuery(
     api.prospects.listPaginated,
-    {},
+    { estado: filterEstado },
     { initialNumItems: 100 }
   );
   const totalStats = useQuery(api.prospects.stats);
@@ -344,11 +344,9 @@ export default function Prospectos() {
   const [bulkLoading, setBulkLoading] = useState(false);
 
   const filtered = prospects.filter((p) => {
-    const matchSearch = search === "" || [p.nombre, p.nicho, p.pais, p.ciudad].some((f) =>
+    return search === "" || [p.nombre, p.nicho, p.pais, p.ciudad].some((f) =>
       f?.toLowerCase().includes(search.toLowerCase())
     );
-    const matchEstado = filterEstado === "todos" || p.estado === filterEstado;
-    return matchSearch && matchEstado;
   });
 
   function field(k: keyof ProspectForm) {
