@@ -314,6 +314,9 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
 }
 
 export default function Prospectos() {
+  const [search, setSearch] = useState("");
+  const [filterEstado, setFilterEstado] = useState("todos");
+
   const { results: prospects, status, loadMore } = usePaginatedQuery(
     api.prospects.listPaginated,
     { estado: filterEstado },
@@ -328,9 +331,6 @@ export default function Prospectos() {
   const cerrarTratoMutation = useMutation(api.prospects.cerrarTrato);
   const removeAllMutation = useMutation(api.prospects.removeAll);
   const removeSinContactoMutation = useMutation(api.prospects.removeSinContacto);
-
-  const [search, setSearch] = useState("");
-  const [filterEstado, setFilterEstado] = useState("todos");
   const [showAdd, setShowAdd] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [editId, setEditId] = useState<Id<"prospects"> | null>(null);
