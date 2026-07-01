@@ -246,10 +246,16 @@ function normalizePhone(tel: string): string[] {
     variants.add("549" + digits.slice(1)); // 5491XXXXXXXX
     variants.add("549" + digits);          // 549011XXXXXXXX (fallback)
   }
-  // Argentina celular con 15: 011152256969 5 → Meta lo guarda como 5491122569695
-  // Regla: quitar el 0 inicial y agregar 54 + 9 antes del área
-  if (digits.startsWith("0") && digits.length >= 10 && digits.length <= 13) {
-    variants.add("549" + digits.slice(1)); // 549 + 11152256969 5
+  // Argentina: Meta elimina el "15" de los celulares
+  // 011 15-2256-9695 → digits=01115225696 95 → Meta: 5491122569695
+  // Regla: quitar 0, quitar 15 después del código de área (011 → 11)
+  if (digits.startsWith("011") && digits.length >= 10) {
+    variants.add("549" + digits.slice(1));       // sin 0: 54911152256969 5
+    // quitar el 15: 011 + 15 + XXXXXXXX → 5491 + XXXXXXXX
+    const sinArea = digits.slice(3); // quitar 011
+    if (sinArea.startsWith("15")) {
+      variants.add("5491" + sinArea.slice(2));   // 5491 + 22569695
+    }
   }
   // últimos 8 dígitos como fallback
   const last8 = digits.slice(-8);
