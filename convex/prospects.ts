@@ -237,22 +237,33 @@ export const countEnviadosDesde = query({
   },
 });
 
+function normalizePhone(tel: string): string[] {
+  const digits = tel.replace(/\D/g, "");
+  const variants = new Set<string>([digits]);
+  // Argentina: 011XXXX → 549011XXXX or 5491XXXXXXXX
+  if (digits.startsWith("011") && digits.length === 11) {
+    variants.add("549" + digits);               // 54901131633563
+    variants.add("549" + digits.slice(1));      // 5491131633563
+  }
+  // +57 / +54 etc already included via digits
+  if (digits.startsWith("54") && digits.length >= 12) variants.add(digits);
+  if (digits.startsWith("57") && digits.length >= 12) variants.add(digits);
+  return Array.from(variants);
+}
+
 export const getMensajes = query({
   args: { telefono: v.string() },
   handler: async (ctx, { telefono }) => {
-    const normalized = telefono.replace(/\D/g, "");
-    // Try normalized first, then original
-    const byNorm = await ctx.db
-      .query("mensajes")
-      .withIndex("by_telefono", (q) => q.eq("telefono", normalized))
-      .order("asc")
-      .collect();
-    if (byNorm.length > 0) return byNorm;
-    return await ctx.db
-      .query("mensajes")
-      .withIndex("by_telefono", (q) => q.eq("telefono", telefono))
-      .order("asc")
-      .collect();
+    const variants = normalizePhone(telefono);
+    for (const normalized of variants) {
+      const msgs = await ctx.db
+        .query("mensajes")
+        .withIndex("by_telefono", (q) => q.eq("telefono", normalized))
+        .order("asc")
+        .collect();
+      if (msgs.length > 0) return msgs;
+    }
+    return [];
   },
 });
 
