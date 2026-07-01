@@ -240,14 +240,23 @@ export const countEnviadosDesde = query({
 function normalizePhone(tel: string): string[] {
   const digits = tel.replace(/\D/g, "");
   const variants = new Set<string>([digits]);
-  // Argentina: 011XXXX → 549011XXXX or 5491XXXXXXXX
+
+  // Argentina fijo: 011XXXXXXXX (11 dígitos) → 5491XXXXXXXX
   if (digits.startsWith("011") && digits.length === 11) {
-    variants.add("549" + digits);               // 54901131633563
-    variants.add("549" + digits.slice(1));      // 5491131633563
+    variants.add("549" + digits.slice(1)); // 5491XXXXXXXX
+    variants.add("549" + digits);          // 549011XXXXXXXX (fallback)
   }
-  // +57 / +54 etc already included via digits
-  if (digits.startsWith("54") && digits.length >= 12) variants.add(digits);
-  if (digits.startsWith("57") && digits.length >= 12) variants.add(digits);
+  // Argentina celular con 15: 011152XXXXXXX → 5491 2XXXXXXX (quitar el 15)
+  if (digits.startsWith("01115") && digits.length === 13) {
+    variants.add("5491" + digits.slice(5)); // 54912XXXXXXX
+  }
+  if (digits.startsWith("01115") && digits.length === 12) {
+    variants.add("5491" + digits.slice(5)); // 5491XXXXXXXX
+  }
+  // últimos 8 dígitos como fallback
+  const last8 = digits.slice(-8);
+  variants.add(last8);
+
   return Array.from(variants);
 }
 
