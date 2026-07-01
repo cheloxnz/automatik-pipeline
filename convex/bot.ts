@@ -125,6 +125,12 @@ export const procesarMensaje = action({
       });
     };
 
+    // Detectar respuestas inválidas/confusas
+    const textoLimpio = texto.trim();
+    const esInvalido = textoLimpio.length <= 2 ||
+      /^[?!.,\s]+$/.test(textoLimpio) ||
+      /^(hola|hi|hey|buenas|buen dia|ok|oke|si|no|dale|jaja|jeje|gracias|thanks)$/i.test(textoLimpio);
+
     if (step === 0) {
       await guardar(texto, "entrante");
       await enviarTexto(telefono, MSG_PREGUNTA_NOMBRE, phoneId, token);
@@ -135,17 +141,30 @@ export const procesarMensaje = action({
       }
 
     } else if (step === 1) {
-      const nombre = texto.trim().split("\n")[0].slice(0, 60);
-      const msgDolor = MSG_PREGUNTA_DOLOR.replace("{{nombre}}", nombre.split(" ")[0]);
       await guardar(texto, "entrante");
+      if (esInvalido) {
+        const msg = "Disculpá 😅 ¿Me podés decir tu nombre y rol en el negocio? Por ejemplo: \"Soy María, dueña del local\"";
+        await enviarTexto(telefono, msg, phoneId, token);
+        await guardar(msg, "saliente");
+        return; // no avanzar de step
+      }
+      const nombre = textoLimpio.split("\n")[0].slice(0, 60);
+      const msgDolor = MSG_PREGUNTA_DOLOR.replace("{{nombre}}", nombre.split(" ")[0]);
       await enviarTexto(telefono, msgDolor, phoneId, token);
       await guardar(msgDolor, "saliente");
       await ctx.runMutation(api.bot.upsertConversacion, { telefono, step: 2, nombre });
 
     } else if (step === 2) {
-      const dolor = texto.trim().slice(0, 200);
-      const nombre = conv?.nombre ?? "";
       await guardar(texto, "entrante");
+      if (esInvalido) {
+        const nombre = conv?.nombre?.split(" ")[0] ?? "";
+        const msg = `${nombre ? nombre + ", " : ""}¿cuál sería el mayor desafío que tienen hoy para conseguir clientes? (ej: \"no tenemos mucha visibilidad online\", \"dependemos del boca a boca\")`;
+        await enviarTexto(telefono, msg, phoneId, token);
+        await guardar(msg, "saliente");
+        return; // no avanzar de step
+      }
+      const dolor = textoLimpio.slice(0, 200);
+      const nombre = conv?.nombre ?? "";
 
       await enviarTexto(telefono, MSG_CIERRE, phoneId, token);
       await guardar(MSG_CIERRE, "saliente");
