@@ -55,26 +55,27 @@ const PAISES_CONOCIDOS = [
 export const enviosPorDia = query({
   args: {},
   handler: async (ctx) => {
-    // Cuenta mensajes salientes de tipo "template" (primer contacto) por día
-    // Usa la tabla mensajes para que el conteo no fluctúe con cambios de estado
-    const hace15Dias = Date.now() - 15 * 24 * 60 * 60 * 1000;
+    const hace30Dias = Date.now() - 30 * 24 * 60 * 60 * 1000;
     const salientes = await ctx.db
       .query("mensajes")
       .filter((q) => q.eq(q.field("tipo"), "saliente"))
       .collect();
-    const recientes = salientes.filter((m) => m.createdAt > hace15Dias);
+    const recientes = salientes.filter((m) => m.createdAt > hace30Dias);
 
     const counts: Record<string, number> = {};
-    for (let i = 14; i >= 0; i--) {
+    for (let i = 29; i >= 0; i--) {
       const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      const key = d.toISOString().slice(0, 10);
-      counts[key] = 0;
+      counts[d.toISOString().slice(0, 10)] = 0;
     }
     for (const m of recientes) {
       const key = new Date(m.createdAt).toISOString().slice(0, 10);
       if (key in counts) counts[key]++;
     }
-    return Object.values(counts);
+    const vals = Object.values(counts);
+    const hoy = vals[vals.length - 1];
+    const ultimos7 = vals.slice(-7).reduce((a, b) => a + b, 0);
+    const ultimos30 = vals.reduce((a, b) => a + b, 0);
+    return { spark: vals.slice(-15), hoy, ultimos7, ultimos30 };
   },
 });
 

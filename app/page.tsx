@@ -52,10 +52,14 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 /* ── WhatsApp Bot Card ──────────────────────────────── */
-function BotCard({ phoneId, label, enviados, pendientes, spark }: {
-  phoneId: string; label: string; enviados: number; pendientes: number; spark: number[];
+function BotCard({ label, enviados, pendientes, sparkData }: {
+  label: string; enviados: number; pendientes: number;
+  sparkData: { spark: number[]; hoy: number; ultimos7: number; ultimos30: number } | null;
 }) {
-  const hoy = spark.length > 0 ? spark[spark.length - 1] : 0;
+  const hoy = sparkData?.hoy ?? 0;
+  const ultimos7 = sparkData?.ultimos7 ?? 0;
+  const ultimos30 = sparkData?.ultimos30 ?? 0;
+  const spark = sparkData?.spark ?? [];
   const ayer = spark.length > 1 ? spark[spark.length - 2] : 0;
   const delta = hoy - ayer;
 
@@ -72,7 +76,7 @@ function BotCard({ phoneId, label, enviados, pendientes, spark }: {
         </div>
       </div>
       <p className="text-[11px] font-mono text-(--color-text)">{label}</p>
-      <div className="flex gap-6">
+      <div className="grid grid-cols-2 gap-x-6 gap-y-3">
         <div>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Total enviados</p>
           <p className="text-xl font-medium text-(--color-text)">{enviados.toLocaleString()}</p>
@@ -83,7 +87,7 @@ function BotCard({ phoneId, label, enviados, pendientes, spark }: {
         </div>
         <div>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Hoy</p>
-          <div className="flex items-baseline gap-1">
+          <div className="flex items-baseline gap-1.5">
             <p className="text-xl font-medium text-[#00ff9d]">{hoy}</p>
             {delta !== 0 && (
               <span className={`text-[10px] font-bold ${delta > 0 ? "text-[#3fb950]" : "text-[#f85149]"}`}>
@@ -91,6 +95,14 @@ function BotCard({ phoneId, label, enviados, pendientes, spark }: {
               </span>
             )}
           </div>
+        </div>
+        <div>
+          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">7 días</p>
+          <p className="text-xl font-medium text-(--color-text)">{ultimos7.toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">30 días</p>
+          <p className="text-xl font-medium text-(--color-text)">{ultimos30.toLocaleString()}</p>
         </div>
       </div>
       {spark.length > 1 && <Sparkline values={spark} />}
@@ -224,7 +236,7 @@ function DashboardContent() {
       {/* ── Bot + Quick Stats ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="animate-card-in" style={{ "--i": "0" } as React.CSSProperties}>
-          <BotCard phoneId="1236307326213120" label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} spark={sparkData ?? []} />
+          <BotCard label={phoneLabel} enviados={stats.enviados} pendientes={stats.pendientes} sparkData={sparkData ?? null} />
         </div>
         <div className="animate-card-in bg-(--color-base) border border-(--color-border) rounded-xl p-5 flex flex-col justify-between" style={{ "--i": "1" } as React.CSSProperties}>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Respondieron</p>
