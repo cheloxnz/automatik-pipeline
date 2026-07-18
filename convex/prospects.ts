@@ -55,20 +55,23 @@ const PAISES_CONOCIDOS = [
 export const enviosPorDia = query({
   args: {},
   handler: async (ctx) => {
-    const hace30Dias = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const salientes = await ctx.db
-      .query("mensajes")
-      .filter((q) => q.eq(q.field("tipo"), "saliente"))
-      .collect();
-    const recientes = salientes.filter((m) => m.createdAt > hace30Dias);
+    // Cuenta prospectos contactados por fechaEnvio — solo el mensaje inicial de campaña
+    const [env, resp, noint, cerr, err] = await Promise.all([
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "enviado")).collect(),
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "respondio")).collect(),
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "no_interesado")).collect(),
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "cerrado")).collect(),
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "error")).collect(),
+    ]);
+    const todos = [...env, ...resp, ...noint, ...cerr, ...err].filter(p => p.fechaEnvio);
 
     const counts: Record<string, number> = {};
     for (let i = 29; i >= 0; i--) {
       const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
       counts[d.toISOString().slice(0, 10)] = 0;
     }
-    for (const m of recientes) {
-      const key = new Date(m.createdAt).toISOString().slice(0, 10);
+    for (const p of todos) {
+      const key = new Date(p.fechaEnvio!).toISOString().slice(0, 10);
       if (key in counts) counts[key]++;
     }
     const vals = Object.values(counts);
