@@ -55,6 +55,10 @@ function Sparkline({ values }: { values: number[] }) {
 function BotCard({ phoneId, label, enviados, pendientes, spark }: {
   phoneId: string; label: string; enviados: number; pendientes: number; spark: number[];
 }) {
+  const hoy = spark.length > 0 ? spark[spark.length - 1] : 0;
+  const ayer = spark.length > 1 ? spark[spark.length - 2] : 0;
+  const delta = hoy - ayer;
+
   return (
     <div className="bg-[#0d1117] border border-[#00ff9d]/20 rounded-xl p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -70,12 +74,23 @@ function BotCard({ phoneId, label, enviados, pendientes, spark }: {
       <p className="text-[11px] font-mono text-(--color-text)">{label}</p>
       <div className="flex gap-6">
         <div>
-          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Enviados</p>
-          <p className="text-xl font-medium text-(--color-text)">{enviados}</p>
+          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Total enviados</p>
+          <p className="text-xl font-medium text-(--color-text)">{enviados.toLocaleString()}</p>
         </div>
         <div>
           <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Pendientes</p>
-          <p className="text-xl font-medium text-(--color-text)">{pendientes}</p>
+          <p className="text-xl font-medium text-(--color-text)">{pendientes.toLocaleString()}</p>
+        </div>
+        <div>
+          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-wider mb-0.5">Hoy</p>
+          <div className="flex items-baseline gap-1">
+            <p className="text-xl font-medium text-[#00ff9d]">{hoy}</p>
+            {delta !== 0 && (
+              <span className={`text-[10px] font-bold ${delta > 0 ? "text-[#3fb950]" : "text-[#f85149]"}`}>
+                {delta > 0 ? `+${delta}` : delta} vs ayer
+              </span>
+            )}
+          </div>
         </div>
       </div>
       {spark.length > 1 && <Sparkline values={spark} />}

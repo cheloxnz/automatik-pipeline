@@ -43,9 +43,19 @@ http.route({
       const msg = value.messages[0] as any;
       const from: string = (msg.from ?? "").replace(/\D/g, "");
       const mensajeId: string = msg.id ?? "";
-      const texto: string = msg.text?.body ?? msg.type ?? "";
 
       if (!from) return new Response("ok", { status: 200 });
+
+      // Audio / voz → transcribir antes de pasar al bot
+      if (msg.type === "audio" || msg.type === "voice") {
+        const mediaId: string = msg.audio?.id ?? msg.voice?.id ?? "";
+        if (mediaId) {
+          await ctx.runAction(api.bot.procesarAudio, { telefono: from, mensajeId, mediaId });
+          return new Response("ok", { status: 200 });
+        }
+      }
+
+      const texto: string = msg.text?.body ?? msg.type ?? "";
 
       // Delegar al bot conversacional
       await ctx.runAction(api.bot.procesarMensaje, {

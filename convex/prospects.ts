@@ -2,6 +2,18 @@ import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 
+export const searchProspectos = query({
+  args: { q: v.string(), estado: v.optional(v.string()) },
+  handler: async (ctx, { q, estado }) => {
+    if (!q) return [];
+    let query = ctx.db.query("prospects").withSearchIndex("search_nombre", (s) => {
+      const base = s.search("nombre", q);
+      return estado && estado !== "todos" ? base.eq("estado", estado) : base;
+    });
+    return await query.take(50);
+  },
+});
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -74,29 +86,23 @@ const NICHOS_CONOCIDOS = [
   "Joyería", "Agencia de marketing inmobiliario",
 ];
 
+// Lee del cache — 1 doc read
 export const statsByNicho = query({
   args: {},
   handler: async (ctx) => {
-    const result: { nicho: string; total: number; contactados: number }[] = [];
-    for (const nicho of NICHOS_CONOCIDOS) {
-      const docs = await ctx.db.query("prospects").withIndex("by_nicho", q => q.eq("nicho", nicho)).collect();
-      if (docs.length === 0) continue;
-      const contactados = docs.filter(p => p.estado !== "pendiente").length;
-      result.push({ nicho, total: docs.length, contactados });
-    }
-    return result.sort((a, b) => b.total - a.total);
+    const cache = await ctx.db.query("statsCache").first();
+    if (cache?.byNicho) return JSON.parse(cache.byNicho) as { nicho: string; total: number; contactados: number }[];
+    return [];
   },
 });
 
+// Lee del cache — 1 doc read
 export const statsByPais = query({
   args: {},
   handler: async (ctx) => {
-    const result: { pais: string; total: number }[] = [];
-    for (const pais of PAISES_CONOCIDOS) {
-      const docs = await ctx.db.query("prospects").withIndex("by_pais", q => q.eq("pais", pais)).collect();
-      if (docs.length > 0) result.push({ pais, total: docs.length });
-    }
-    return result.sort((a, b) => b.total - a.total);
+    const cache = await ctx.db.query("statsCache").first();
+    if (cache?.byPais) return JSON.parse(cache.byPais) as { pais: string; total: number }[];
+    return [];
   },
 });
 
@@ -110,32 +116,155 @@ export const byEstado = query({
   },
 });
 
+// Lee del cache — 1 doc read en vez de miles
 export const stats = query({
   args: {},
   handler: async (ctx) => {
-    // Usar índices por estado para evitar full table scan
-    const [pendientes, enviados, respondieron, cerrados, errores] = await Promise.all([
+    const cache = await ctx.db.query("statsCache").first();
+    if (cache) {
+      const nE = cache.enviados;
+      const nR = cache.respondieron;
+      const nNI = cache.noInteresados;
+      const nC = cache.cerrados;
+      const total = cache.pendientes + nE + nR + nNI + nC + cache.errores;
+      return {
+        total, enviados: nE, respondieron: nR + nNI,
+        noInteresados: nNI, cerrados: nC, errores: cache.errores, pendientes: cache.pendientes,
+        ingresoReal: cache.ingresoReal, ticketPromedio: nC > 0 ? Math.round(cache.ingresoReal / nC) : 0,
+        tasaRespuesta: nE > 0 ? Math.round((nR / nE) * 100) : 0,
+        tasaConversion: nE > 0 ? Math.round((nC / nE) * 100) : 0,
+      };
+    }
+    // Fallback: calcular desde cero si no hay cache aún
+    const [pend, env, resp, noint, cerr, err] = await Promise.all([
       ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "pendiente")).collect(),
       ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "enviado")).collect(),
       ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "respondio")).collect(),
+      ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "no_interesado")).collect(),
       ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "cerrado")).collect(),
       ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "error")).collect(),
     ]);
-    const nPendientes = pendientes.length;
-    const nEnviados = enviados.length;
-    const nRespondieron = respondieron.length;
-    const nCerrados = cerrados.length;
-    const nErrores = errores.length;
-    const total = nPendientes + nEnviados + nRespondieron + nCerrados + nErrores;
-    const ingresoReal = cerrados.reduce((s, p) => s + (p.monto ?? 0), 0);
-    const ticketPromedio = nCerrados > 0 ? Math.round(ingresoReal / nCerrados) : 0;
+    const ingresoReal = cerr.reduce((s, p) => s + (p.monto ?? 0), 0);
     return {
-      total, enviados: nEnviados, respondieron: nRespondieron,
-      cerrados: nCerrados, errores: nErrores, pendientes: nPendientes,
-      ingresoReal, ticketPromedio,
-      tasaRespuesta: nEnviados > 0 ? Math.round((nRespondieron / nEnviados) * 100) : 0,
-      tasaConversion: nEnviados > 0 ? Math.round((nCerrados / nEnviados) * 100) : 0,
+      total: pend.length + env.length + resp.length + noint.length + cerr.length + err.length,
+      enviados: env.length, respondieron: resp.length + noint.length,
+      noInteresados: noint.length, cerrados: cerr.length, errores: err.length, pendientes: pend.length,
+      ingresoReal, ticketPromedio: cerr.length > 0 ? Math.round(ingresoReal / cerr.length) : 0,
+      tasaRespuesta: env.length > 0 ? Math.round((resp.length / env.length) * 100) : 0,
+      tasaConversion: env.length > 0 ? Math.round((cerr.length / env.length) * 100) : 0,
     };
+  },
+});
+
+export const countByEstado = query({
+  args: { estado: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { estado, paginationOpts }) => {
+    return await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", estado))
+      .paginate(paginationOpts);
+  },
+});
+
+export const pageByEstadoFields = query({
+  args: { estado: v.string(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { estado, paginationOpts }) => {
+    const result = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado", (q) => q.eq("estado", estado))
+      .paginate(paginationOpts);
+    // Solo devolver campos livianos para el conteo por nicho/pais
+    return {
+      ...result,
+      page: result.page.map((p) => ({ nicho: p.nicho, pais: p.pais })),
+    };
+  },
+});
+
+// Guarda conteos correctos en el cache (llamado desde script externo)
+export const patchStatsCache = mutation({
+  args: {
+    pendientes: v.number(), enviados: v.number(), respondieron: v.number(),
+    noInteresados: v.number(), cerrados: v.number(), errores: v.number(),
+  },
+  handler: async (ctx, data) => {
+    const existing = await ctx.db.query("statsCache").first();
+    const patch = { ...data, updatedAt: Date.now() };
+    if (existing) await ctx.db.patch(existing._id, patch);
+    else await ctx.db.insert("statsCache", { ...patch, ingresoReal: 0 });
+  },
+});
+
+export const patchByNicho = mutation({
+  args: { byNicho: v.string(), byPais: v.string() },
+  handler: async (ctx, { byNicho, byPais }) => {
+    const existing = await ctx.db.query("statsCache").first();
+    if (existing) await ctx.db.patch(existing._id, { byNicho, byPais, updatedAt: Date.now() });
+  },
+});
+
+// Recalcula y guarda el cache — llamado por el cron cada 30 min
+export const recalcularStatsCache = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Los no-pendientes son pocos miles — se pueden leer completos
+    const env   = await ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "enviado")).collect();
+    const resp  = await ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "respondio")).collect();
+    const noint = await ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "no_interesado")).collect();
+    const cerr  = await ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "cerrado")).collect();
+    const err   = await ctx.db.query("prospects").withIndex("by_estado", q => q.eq("estado", "error")).collect();
+
+    const ingresoReal = cerr.reduce((s, p) => s + (p.monto ?? 0), 0);
+
+    const existing = await ctx.db.query("statsCache").first();
+
+    // byNicho: actualizar contactados por nicho, pero preservar los totales del cache
+    // (el total real solo lo puede calcular el script externo recalc-stats.mjs)
+    const nichoContactados: Record<string, number> = {};
+    for (const p of [...env, ...resp, ...noint, ...cerr, ...err]) {
+      nichoContactados[p.nicho] = (nichoContactados[p.nicho] ?? 0) + 1;
+    }
+    let byNicho: { nicho: string; total: number; contactados: number }[] = [];
+    if (existing?.byNicho) {
+      // Actualizar contactados, preservar totales
+      const cached = JSON.parse(existing.byNicho) as { nicho: string; total: number; contactados: number }[];
+      byNicho = cached.map(n => ({ ...n, contactados: nichoContactados[n.nicho] ?? 0 }));
+      // Agregar nichos nuevos que no estaban en cache
+      for (const [nicho, contactados] of Object.entries(nichoContactados)) {
+        if (!byNicho.find(n => n.nicho === nicho)) {
+          byNicho.push({ nicho, total: contactados, contactados });
+        }
+      }
+    } else {
+      // Sin cache previo: total = contactados (incorrecto pero mejor que nada)
+      byNicho = Object.entries(nichoContactados)
+        .map(([nicho, contactados]) => ({ nicho, total: contactados, contactados }))
+        .sort((a, b) => b.total - a.total);
+    }
+    byNicho.sort((a, b) => b.total - a.total);
+
+    // byPais: igual — preservar totales del cache, actualizar contactados
+    const paisContactados: Record<string, number> = {};
+    for (const p of [...env, ...resp, ...noint, ...cerr, ...err]) {
+      paisContactados[p.pais] = (paisContactados[p.pais] ?? 0) + 1;
+    }
+    const byPais = Object.entries(paisContactados)
+      .map(([pais, total]) => ({ pais, total }))
+      .sort((a, b) => b.total - a.total);
+
+    // Pendientes: NO sobreescribir con take() capeado — preservar el valor del cache
+    // El valor correcto se mantiene por incremento/decremento en updateEstado y bulkImport
+    const pendientes = existing?.pendientes ?? 0;
+
+    const data = {
+      pendientes, enviados: env.length, respondieron: resp.length,
+      noInteresados: noint.length, cerrados: cerr.length, errores: err.length,
+      ingresoReal, updatedAt: Date.now(),
+      byPais: JSON.stringify(byPais),
+      byNicho: JSON.stringify(byNicho),
+    };
+    if (existing) await ctx.db.patch(existing._id, data);
+    else await ctx.db.insert("statsCache", data);
   },
 });
 
@@ -170,6 +299,19 @@ export const cerrarTrato = mutation({
   },
 });
 
+// Ajusta un contador del statsCache en +delta para un estado dado
+async function ajustarCache(ctx: any, estado: string, delta: number) {
+  const cache = await ctx.db.query("statsCache").first();
+  if (!cache) return;
+  const campo: Record<string, string> = {
+    pendiente: "pendientes", enviado: "enviados", respondio: "respondieron",
+    no_interesado: "noInteresados", cerrado: "cerrados", error: "errores",
+  };
+  const key = campo[estado];
+  if (!key) return;
+  await ctx.db.patch(cache._id, { [key]: Math.max(0, (cache[key] ?? 0) + delta) });
+}
+
 export const updateEstado = mutation({
   args: {
     id: v.id("prospects"),
@@ -178,7 +320,13 @@ export const updateEstado = mutation({
     mensajeId: v.optional(v.string()),
   },
   handler: async (ctx, { id, estado, fechaEnvio, mensajeId }) => {
+    const prev = await ctx.db.get(id);
     await ctx.db.patch(id, { estado, fechaEnvio, mensajeId });
+    // Actualizar cache incremental
+    if (prev && prev.estado !== estado) {
+      await ajustarCache(ctx, prev.estado, -1);
+      await ajustarCache(ctx, estado, +1);
+    }
   },
 });
 
@@ -241,27 +389,33 @@ function normalizePhone(tel: string): string[] {
   const digits = tel.replace(/\D/g, "");
   const variants = new Set<string>([digits]);
 
-  // Argentina fijo: 011XXXXXXXX (11 dígitos) → 5491XXXXXXXX
-  if (digits.startsWith("011") && digits.length === 11) {
-    variants.add("549" + digits.slice(1)); // 5491XXXXXXXX
-    variants.add("549" + digits);          // 549011XXXXXXXX (fallback)
+  // Ya es formato internacional completo
+  if (digits.startsWith("54") && digits.length >= 12) {
+    variants.add(digits);
+    // Con y sin el 9 de celular
+    if (digits.startsWith("549")) variants.add("54" + digits.slice(3));
+    else variants.add("549" + digits.slice(2));
   }
-  // Argentina: Meta elimina el "15" de los celulares
-  // 011 15-2256-9695 → digits=01115225696 95 → Meta: 5491122569695
-  if (digits.startsWith("011")) {
-    // fijo: 011 + 8 dígitos → 5491 + 8 dígitos
-    variants.add("5491" + digits.slice(3));          // 5491 + 152256969 5 (con 15)
-    // celular: 011 + 15 + 8 dígitos → 549 + 11 + 8 dígitos
-    const sinCero = digits.slice(1);                 // 11 + 15 + 22569695
-    const areaCel = sinCero.slice(0, 2);             // 11
-    const resto = sinCero.slice(2);                  // 152256969 5
-    if (resto.startsWith("15")) {
-      variants.add("549" + areaCel + resto.slice(2)); // 549 + 11 + 22569695
+
+  // Argentina local: empieza con 0 → agregar prefijo 54
+  if (digits.startsWith("0") && digits.length >= 10) {
+    const sinCero = digits.slice(1); // quitar el 0 inicial
+    variants.add("54" + sinCero);    // número fijo: 54 + area + número
+    variants.add("549" + sinCero);   // celular: 549 + area + número
+
+    // Si tiene "15" de celular local (ej: 0291 15-467-0250)
+    // detectar el área (2-4 dígitos) + 15 + número
+    for (const areaLen of [2, 3, 4]) {
+      const area = sinCero.slice(0, areaLen);
+      const resto = sinCero.slice(areaLen);
+      if (resto.startsWith("15") && resto.length >= 9) {
+        variants.add("549" + area + resto.slice(2)); // sin el 15
+      }
     }
   }
-  // últimos 8 dígitos como fallback
-  const last8 = digits.slice(-8);
-  variants.add(last8);
+
+  // últimos 8 dígitos como fallback universal
+  variants.add(digits.slice(-8));
 
   return Array.from(variants);
 }
@@ -288,9 +442,35 @@ export const guardarMensaje = mutation({
     prospectId: v.optional(v.id("prospects")),
     texto: v.string(),
     tipo: v.string(),
+    mensajeId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Deduplicar por mensajeId para evitar procesar el mismo webhook dos veces
+    if (args.mensajeId) {
+      const existing = await ctx.db
+        .query("mensajes")
+        .withIndex("by_mensajeId", (q) => q.eq("mensajeId", args.mensajeId!))
+        .first();
+      if (existing) return false; // ya procesado
+    }
     await ctx.db.insert("mensajes", { ...args, createdAt: Date.now() });
+    if (args.tipo === "entrante" && args.prospectId) {
+      const p = await ctx.db.get(args.prospectId);
+      if (p) {
+        await ctx.db.patch(args.prospectId, {
+          ultimaActividad: Date.now(),
+          mensajesNuevos: (p.mensajesNuevos ?? 0) + 1,
+        });
+      }
+    }
+    return true;
+  },
+});
+
+export const limpiarBadge = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.patch(id, { mensajesNuevos: 0 });
   },
 });
 
@@ -298,6 +478,31 @@ export const getById = query({
   args: { id: v.id("prospects") },
   handler: async (ctx, { id }) => {
     return await ctx.db.get(id);
+  },
+});
+
+// Busca un prospecto por teléfono (maneja formato local vs internacional)
+export const getByTelefono = query({
+  args: { telefono: v.string() },
+  handler: async (ctx, { telefono }) => {
+    const telNorm = telefono.replace(/\D/g, "");
+    const last8 = telNorm.slice(-8);
+
+    // Buscar en enviado y respondio (los dos estados activos)
+    for (const estado of ["enviado", "respondio"] as const) {
+      const candidates = await ctx.db
+        .query("prospects")
+        .withIndex("by_estado", (q) => q.eq("estado", estado))
+        .filter((q) => q.neq(q.field("telefono"), undefined))
+        .take(3000);
+
+      const match = candidates.find((p) => {
+        const t = (p.telefono ?? "").replace(/\D/g, "");
+        return t.endsWith(last8) || telNorm.endsWith(t.slice(-8));
+      });
+      if (match) return match;
+    }
+    return null;
   },
 });
 
@@ -319,13 +524,36 @@ export const listByEstadoFiltrado = query({
     paises: v.array(v.string()),
   },
   handler: async (ctx, { estado, limite, nichos, paises }) => {
-    let results = await ctx.db
-      .query("prospects")
-      .withIndex("by_estado", (q) => q.eq("estado", estado))
-      .collect();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let results: any[] = [];
 
-    if (nichos.length > 0) results = results.filter((p) => nichos.includes(p.nicho));
-    if (paises.length > 0) results = results.filter((p) => paises.includes(p.pais));
+    if (nichos.length === 1) {
+      results = await ctx.db
+        .query("prospects")
+        .withIndex("by_estado_nicho", (q) =>
+          q.eq("estado", estado).eq("nicho", nichos[0])
+        )
+        .take(limite * 3);
+    } else if (nichos.length > 1) {
+      const parts = await Promise.all(
+        nichos.map((n) =>
+          ctx.db
+            .query("prospects")
+            .withIndex("by_estado_nicho", (q) =>
+              q.eq("estado", estado).eq("nicho", n)
+            )
+            .take(limite)
+        )
+      );
+      results = parts.flat();
+    } else {
+      results = await ctx.db
+        .query("prospects")
+        .withIndex("by_estado", (q) => q.eq("estado", estado))
+        .take(Math.min(limite * 5, 2000));
+    }
+
+    if (paises.length > 0) results = results.filter((p: any) => paises.includes(p.pais));
 
     return results.slice(0, limite);
   },
@@ -346,6 +574,58 @@ export const registrarRespuesta = mutation({
       notas: (prospect.notas ? prospect.notas + "\n" : "") + `Respondió: "${texto.slice(0, 120)}"`,
     });
     return prospect._id;
+  },
+});
+
+// Corrección puntual: marca como respondio los prospectos de conversaciones sin prospectId
+export const fixRespondioHoy = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // Traer conversaciones de hoy sin prospectId
+    const hoyMs = Date.now() - 24 * 60 * 60 * 1000;
+    const convs = await ctx.db.query("conversaciones")
+      .filter((q) => q.and(
+        q.gte(q.field("createdAt"), hoyMs),
+        q.eq(q.field("prospectId"), undefined)
+      ))
+      .collect();
+
+    let actualizados = 0;
+    for (const conv of convs) {
+      const telNorm = conv.telefono.replace(/\D/g, "");
+      const last8 = telNorm.slice(-8);
+
+      // Buscar en enviados usando el índice
+      const candidatos = await ctx.db
+        .query("prospects")
+        .withIndex("by_estado", (q) => q.eq("estado", "enviado"))
+        .filter((q) => q.neq(q.field("telefono"), undefined))
+        .take(3000);
+
+      const match = candidatos.find((p) => {
+        const t = (p.telefono ?? "").replace(/\D/g, "");
+        return t.endsWith(last8) || telNorm.endsWith(t.slice(-8));
+      });
+
+      if (match) {
+        await ctx.db.patch(match._id, { estado: "respondio" });
+        await ctx.db.patch(conv._id, { prospectId: match._id });
+        actualizados++;
+      }
+    }
+    return { convsSinMatch: convs.length, actualizados };
+  },
+});
+
+export const fixNicho = mutation({
+  args: { nichoViejo: v.string(), nichoNuevo: v.string() },
+  handler: async (ctx, { nichoViejo, nichoNuevo }) => {
+    const all = await ctx.db.query("prospects").collect();
+    const targets = all.filter((p) => p.nicho === nichoViejo);
+    for (const p of targets) {
+      await ctx.db.patch(p._id, { nicho: nichoNuevo });
+    }
+    return targets.length;
   },
 });
 
@@ -374,6 +654,36 @@ export const bulkImport = mutation({
       });
       ids.push(id);
     }
+    // Actualizar cache incremental
+    const cache = await ctx.db.query("statsCache").first();
+    if (cache) await ctx.db.patch(cache._id, { pendientes: (cache.pendientes ?? 0) + ids.length });
     return ids;
+  },
+});
+
+export const deleteProspect = mutation({
+  args: { id: v.id("prospects") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id);
+  },
+});
+
+export const resetErrores = mutation({
+  args: {
+    nicho: v.string(),
+    mensajeIdFiltro: v.optional(v.string()),
+  },
+  handler: async (ctx, { nicho, mensajeIdFiltro }) => {
+    const all = await ctx.db
+      .query("prospects")
+      .withIndex("by_estado_nicho", (q) => q.eq("estado", "error").eq("nicho", nicho))
+      .collect();
+    let count = 0;
+    for (const p of all) {
+      if (mensajeIdFiltro && p.mensajeId !== mensajeIdFiltro) continue;
+      await ctx.db.patch(p._id, { estado: "pendiente", mensajeId: undefined, fechaEnvio: undefined });
+      count++;
+    }
+    return count;
   },
 });

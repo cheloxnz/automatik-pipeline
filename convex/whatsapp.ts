@@ -38,7 +38,7 @@ async function sendTemplate(
       type: "template",
       template: {
         name: templateName,
-        language: { code: "es_AR" },
+        language: { code: "es" },
         components,
       },
     }),
@@ -124,6 +124,30 @@ async function enviarLoteInterno(
 
   for (const p of pendientes) {
     if (!p.telefono) { errores++; continue; }
+
+    // Saltar números fijos argentinos — AR celular = 54 + 9 + área + número = 13 dígitos
+    // Para otros países no aplicar este filtro (cada país tiene longitud distinta)
+    const digits = p.telefono.replace(/\D/g, "");
+    const isArgentina = digits.startsWith("54");
+    if (isArgentina && digits.length < 13) {
+      await ctx.runMutation(api.prospects.updateEstado, {
+        id: p._id,
+        estado: "error",
+        mensajeId: "numero_fijo_sin_whatsapp",
+      });
+      errores++;
+      continue;
+    }
+    // Descartar números muy cortos sin importar el país
+    if (digits.length < 10) {
+      await ctx.runMutation(api.prospects.updateEstado, {
+        id: p._id,
+        estado: "error",
+        mensajeId: "numero_invalido",
+      });
+      errores++;
+      continue;
+    }
 
     const result = await sendTemplate(p.telefono, p.nombre, p.ciudad, templateName, phoneId, token);
 

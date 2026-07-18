@@ -11,15 +11,11 @@ import {
 const TEMPLATE_DEFAULT = "automatik_prospecto_v2";
 const PHONE_ID_DEFAULT = "1236307326213120";
 
-const TEMPLATE_PREVIEW = `Hola {{1}} 👋
+const TEMPLATE_PREVIEW = `Hola! Vi que tienen {{1}} en {{2}} 👋
 
-Vi que tienen su negocio en {{2}}. Les escribo porque ayudamos a negocios como el suyo a automatizar tareas con IA — atención por WhatsApp, agendamiento, seguimiento de clientes.
+Te escribo de Automatik Media — instalamos bots de WhatsApp que atienden solos 24/7 para que no pierdas ninguna consulta, ni de noche ni los fines de semana.
 
-¿Es algo que les interesaría explorar? Si quieren, coordinamos 30 minutos para ver qué tiene sentido en su caso.
-
-Saludos, Marcelo - Automatik Media
-
-[ Agendar 30 minutos → ]`;
+¿Tienen mucho movimiento por WhatsApp?`;
 
 const NICHOS_DISPONIBLES = [
   "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",
@@ -231,7 +227,7 @@ export default function Campana() {
                     value={limiteDiario} onChange={(e) => setLimiteDiario(Number(e.target.value))}
                     className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-2 text-sm text-[#e6edf3] focus:outline-none"
                   >
-                    {[10, 25, 50, 75, 100].map((n) => (
+                    {[10, 25, 50, 75, 100, 150, 200, 300, 400, 500].map((n) => (
                       <option key={n} value={n}>{n} mensajes</option>
                     ))}
                   </select>

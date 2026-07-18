@@ -4,6 +4,7 @@ import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/reac
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Plus, Upload, Search, Trash2, Edit2, X, Check, AlertTriangle, MapPin, Loader2, ChevronDown, MessageCircle, ExternalLink, Phone } from "lucide-react";
+// recordatorios imported via api.recordatorios.*
 
 const NICHOS_SUGERIDOS = [
   "Spa", "Peluquería", "Estética", "Veterinaria", "Fotografía",
@@ -134,16 +135,17 @@ function SearchModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-const ESTADOS = ["pendiente", "enviado", "respondio", "cerrado", "error"];
+const ESTADOS = ["pendiente", "enviado", "respondio", "no_interesado", "cerrado", "error"];
 
 // Semantic state palette — OKLCH-derived, not GitHub Dark defaults
-// pendiente: slate neutral  enviado: sapphire  respondio: amber (needs attention)  cerrado: emerald  error: rose
+// pendiente: slate  enviado: sapphire  respondio: amber  no_interesado: violet  cerrado: emerald  error: rose
 const BADGE: Record<string, string> = {
-  pendiente: "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
-  enviado:   "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
-  respondio: "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
-  cerrado:   "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
-  error:     "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
+  pendiente:     "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
+  enviado:       "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
+  respondio:     "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
+  no_interesado: "bg-[#1a1520] text-[#a78bfa] border border-[#2e2040]",
+  cerrado:       "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
+  error:         "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
 
 type ProspectForm = {
@@ -182,15 +184,36 @@ function FormField({ label, value, onChange, placeholder, type = "text" }: {
 }
 
 const BADGE_PANEL: Record<string, string> = {
-  pendiente: "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
-  enviado:   "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
-  respondio: "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
-  cerrado:   "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
-  error:     "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
+  pendiente:     "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]",
+  enviado:       "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]",
+  respondio:     "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
+  no_interesado: "bg-[#1a1520] text-[#a78bfa] border border-[#2e2040]",
+  cerrado:       "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
+  error:         "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
 
 function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospects">; nombre: string; nicho: string; ciudad: string; pais: string; telefono?: string; email?: string; urlPerfil?: string; notas?: string; estado: string; monto?: number; fechaEnvio?: string; createdAt: number }; onClose: () => void }) {
   const mensajes = useQuery(api.prospects.getMensajes, { telefono: prospect.telefono ?? "" });
+  const crearRecordatorio = useMutation(api.recordatorios.crear);
+  const [showRecordatorio, setShowRecordatorio] = useState(false);
+  const [recFecha, setRecFecha] = useState("");
+  const [recHora, setRecHora] = useState("09:00");
+  const [recNota, setRecNota] = useState("");
+  const [recGuardado, setRecGuardado] = useState(false);
+
+  async function handleGuardarRecordatorio() {
+    if (!recFecha) return;
+    const fechaMs = new Date(`${recFecha}T${recHora}:00-03:00`).getTime();
+    await crearRecordatorio({
+      prospectId: prospect._id,
+      prospectNombre: prospect.nombre,
+      prospectTelefono: prospect.telefono,
+      nota: recNota || undefined,
+      fechaMs,
+    });
+    setRecGuardado(true);
+    setTimeout(() => { setShowRecordatorio(false); setRecGuardado(false); setRecFecha(""); setRecNota(""); }, 1500);
+  }
 
   function formatHora(ts: number) {
     return new Date(ts).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
@@ -303,13 +326,94 @@ function ConversacionPanel({ prospect, onClose }: { prospect: { _id: Id<"prospec
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-[#30363d] shrink-0">
+        <div className="px-5 py-3 border-t border-[#30363d] shrink-0 space-y-3">
+          {showRecordatorio ? (
+            <div className="bg-[#0d1117] border border-[#30363d] rounded-xl p-3 space-y-2">
+              <p className="text-[11px] text-[#8b949e] font-medium">Nuevo recordatorio</p>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={recFecha}
+                  onChange={e => setRecFecha(e.target.value)}
+                  className="flex-1 bg-[#161b22] border border-[#30363d] text-[#e6edf3] text-xs rounded-lg px-2 py-1.5 outline-none"
+                />
+                <input
+                  type="time"
+                  value={recHora}
+                  onChange={e => setRecHora(e.target.value)}
+                  className="w-24 bg-[#161b22] border border-[#30363d] text-[#e6edf3] text-xs rounded-lg px-2 py-1.5 outline-none"
+                />
+              </div>
+              <input
+                placeholder="Nota (opcional)"
+                value={recNota}
+                onChange={e => setRecNota(e.target.value)}
+                className="w-full bg-[#161b22] border border-[#30363d] text-[#e6edf3] text-xs rounded-lg px-2 py-1.5 outline-none placeholder-[#484f58]"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleGuardarRecordatorio}
+                  disabled={!recFecha}
+                  className="flex-1 text-xs bg-[#00ff9d]/10 border border-[#00ff9d]/30 text-[#00ff9d] rounded-lg py-1.5 hover:bg-[#00ff9d]/20 disabled:opacity-40 transition-colors"
+                >
+                  {recGuardado ? "✓ Guardado" : "Guardar"}
+                </button>
+                <button
+                  onClick={() => setShowRecordatorio(false)}
+                  className="text-xs text-[#484f58] hover:text-[#8b949e] px-3"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRecordatorio(true)}
+              className="w-full text-xs text-[#8b949e] hover:text-[#e6edf3] border border-[#30363d] hover:border-[#484f58] rounded-lg py-2 transition-colors flex items-center justify-center gap-1.5"
+            >
+              📅 Agendar recordatorio
+            </button>
+          )}
           <p className="text-[10px] text-[#484f58] text-center">
             Respondé desde tu WhatsApp personal · El bot maneja el flujo automáticamente
           </p>
         </div>
       </div>
     </>
+  );
+}
+
+function RecordatoriosBanner() {
+  const activos = useQuery(api.recordatorios.listActivos);
+  const cerrar = useMutation(api.recordatorios.cerrar);
+
+  if (!activos?.length) return null;
+
+  return (
+    <div className="flex flex-col gap-2 mb-4">
+      {activos.map(rec => (
+        <div key={rec._id} className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3">
+          <span className="text-lg shrink-0">📅</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-300">
+              Recordar contactar a {rec.prospectNombre}
+            </p>
+            {rec.prospectTelefono && (
+              <p className="text-xs text-amber-400/70">📱 {rec.prospectTelefono}</p>
+            )}
+            {rec.nota && (
+              <p className="text-xs text-amber-400/70 mt-0.5">{rec.nota}</p>
+            )}
+          </div>
+          <button
+            onClick={() => cerrar({ id: rec._id })}
+            className="shrink-0 text-xs bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded-lg px-3 py-1.5 transition-colors"
+          >
+            Listo ✓
+          </button>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -322,9 +426,14 @@ export default function Prospectos() {
     { estado: filterEstado },
     { initialNumItems: 100 }
   );
+  const searchResults = useQuery(
+    api.prospects.searchProspectos,
+    search.length >= 2 ? { q: search, estado: filterEstado } : "skip"
+  );
   const totalStats = useQuery(api.prospects.stats);
   const createMutation = useMutation(api.prospects.create);
   const updateMutation = useMutation(api.prospects.update);
+  const limpiarBadgeMutation = useMutation(api.prospects.limpiarBadge);
   const removeMutation = useMutation(api.prospects.remove);
   const bulkImportMutation = useMutation(api.prospects.bulkImport);
   const updateEstadoMutation = useMutation(api.prospects.updateEstado);
@@ -343,10 +452,25 @@ export default function Prospectos() {
   const [bulkEstado, setBulkEstado] = useState("enviado");
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  const filtered = prospects.filter((p) => {
-    return search === "" || [p.nombre, p.nicho, p.pais, p.ciudad].some((f) =>
-      f?.toLowerCase().includes(search.toLowerCase())
-    );
+  const filteredRaw = search.length >= 2
+    ? (searchResults ?? [])
+    : prospects;
+
+  // Sort: respondio with new messages first, then by ultimaActividad desc, rest unchanged
+  const filtered = [...filteredRaw].sort((a, b) => {
+    const aIsRes = a.estado === "respondio";
+    const bIsRes = b.estado === "respondio";
+    if (aIsRes && !bIsRes) return -1;
+    if (!aIsRes && bIsRes) return 1;
+    if (aIsRes && bIsRes) {
+      const aNew = (a as any).mensajesNuevos ?? 0;
+      const bNew = (b as any).mensajesNuevos ?? 0;
+      if (bNew !== aNew) return bNew - aNew;
+      const aAct = (a as any).ultimaActividad ?? a.createdAt;
+      const bAct = (b as any).ultimaActividad ?? b.createdAt;
+      return bAct - aAct;
+    }
+    return 0;
   });
 
   function field(k: keyof ProspectForm) {
@@ -463,6 +587,8 @@ export default function Prospectos() {
   return (
     <div className="p-6">
       {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+
+      <RecordatoriosBanner />
 
       {/* Header */}
       <div className="flex items-center justify-between mb-5 border-b border-[#30363d] pb-4">
@@ -611,10 +737,20 @@ export default function Prospectos() {
                   {/* Negocio: nombre prominente + nicho muted debajo */}
                   <td className="px-3 py-3 max-w-[0]">
                     <button
-                      onClick={() => setPanelProspect(p)}
+                      onClick={() => {
+                        setPanelProspect(p);
+                        if ((p as any).mensajesNuevos > 0) limpiarBadgeMutation({ id: p._id });
+                      }}
                       className="font-semibold text-[#e6edf3] hover:text-[#60a5fa] transition-colors text-left truncate w-full block text-[13px] leading-tight"
                     >
-                      {p.nombre}
+                      <span className="flex items-center gap-2">
+                        <span className="truncate">{p.nombre}</span>
+                        {(p as any).mensajesNuevos > 0 && (
+                          <span className="shrink-0 inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#f59e0b] text-[#0d1117] text-[9px] font-black">
+                            {(p as any).mensajesNuevos}
+                          </span>
+                        )}
+                      </span>
                     </button>
                     <span className="text-[10px] text-[#484f58] truncate block mt-0.5">{p.nicho}</span>
                   </td>
@@ -670,7 +806,10 @@ export default function Prospectos() {
                   <td className="px-4 py-3">
                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => setPanelProspect(p)}
+                        onClick={() => {
+                          setPanelProspect(p);
+                          if ((p as any).mensajesNuevos > 0) limpiarBadgeMutation({ id: p._id });
+                        }}
                         aria-label="Ver conversación"
                         className="text-[#484f58] hover:text-[#60a5fa] transition-colors"
                       >

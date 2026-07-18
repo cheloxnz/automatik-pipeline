@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { LayoutDashboard, Users, Settings, Zap, Send, Menu, X } from "lucide-react";
+import { LayoutDashboard, Users, Settings, Zap, Send, Menu, X, CalendarDays } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const SEEN_KEY = "ap_seen_respondieron";
@@ -18,7 +18,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const respondieron = stats?.respondieron ?? 0;
-  const unread = Math.max(0, respondieron - seen);
+  const unread = respondieron;
 
   useEffect(() => {
     if (path === "/prospectos" && respondieron > 0) {
@@ -33,6 +33,7 @@ export default function Sidebar() {
     { href: "/", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
     { href: "/prospectos", label: "Prospectos", icon: Users, badge: unread },
     { href: "/campana", label: "Campaña", icon: Send, badge: 0 },
+    { href: "/calendario", label: "Calendario", icon: CalendarDays, badge: 0 },
     { href: "/configuracion", label: "Configuración", icon: Settings, badge: 0 },
   ];
 
