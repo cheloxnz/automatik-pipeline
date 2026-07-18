@@ -247,6 +247,37 @@ function esAutoresponder(texto: string): boolean {
   return AUTORESPONDER_PATTERNS.some((re) => re.test(texto));
 }
 
+// ── Detección de rechazo directo ──────────────────────────────────────────────
+const RECHAZO_PATTERNS = [
+  /no (estamos?|estoy) interesad[ao]/i,
+  /no (me |nos )interesa/i,
+  /no (lo |les? )necesitamos?/i,
+  /no gracias/i,
+  /gracias,? (pero )?no/i,
+  /no (queremos?|quiero)/i,
+  /no (por ahora|por el momento|en este momento)/i,
+  /por (el |ahora el )?momento no/i,
+  /no (estamos? buscando|buscamos)/i,
+  /ya (tenemos?|contamos? con|lo tenemos?)/i,
+  /no (nos |me )interesa/i,
+  /prefiero? no/i,
+  /no necesito/i,
+  /no necesitamos/i,
+  /no (estamos? en|estoy en) condiciones/i,
+  /no (tenemos?|hay) presupuesto/i,
+  /no (aplica|corresponde)/i,
+  /d[eé]jenme en paz/i,
+  /sac[aá]me de la lista/i,
+  /no me (molest|contac)/i,
+  /stop/i,
+  /cancelar/i,
+  /baja/i,
+];
+
+function esRechazoDirecto(texto: string): boolean {
+  return RECHAZO_PATTERNS.some((re) => re.test(texto));
+}
+
 // ── Obtener o crear conversación por teléfono ──────────────────────────────
 export const getConversacion = query({
   args: { telefono: v.string() },
@@ -398,6 +429,16 @@ export const procesarMensaje = action({
     const repeticiones = recientes.filter((m) => m.tipo === "entrante" && m.texto === texto).length;
     if (repeticiones >= 3) {
       console.log(`[LOOP-DETECTADO] +${telNorm} repitió el mismo mensaje ${repeticiones} veces — ignorando.`);
+      return;
+    }
+
+    // ── Rechazo directo — marcar no_interesado y no responder más ────────────
+    if (esRechazoDirecto(texto)) {
+      console.log(`[RECHAZO-DIRECTO] +${telNorm} — marcando no_interesado.`);
+      if (prospect) {
+        await ctx.runMutation(api.prospects.updateEstado, { id: prospect._id, estado: "no_interesado", mensajeId });
+      }
+      await ctx.runMutation(api.bot.upsertConversacion, { telefono, prospectId: pid, step: 3 });
       return;
     }
 
