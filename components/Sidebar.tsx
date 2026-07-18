@@ -18,7 +18,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const respondieron = stats?.respondieron ?? 0;
-  const unread = respondieron;
+  const unread = Math.max(0, respondieron - seen);
 
   useEffect(() => {
     if (path === "/prospectos" && respondieron > 0) {
