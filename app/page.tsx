@@ -4,7 +4,7 @@ import { api } from "@/convex/_generated/api";
 import { Component, ReactNode, useState, useEffect } from "react";
 import {
   MessageSquare, Users, CheckCircle2, TrendingUp,
-  DollarSign, Zap, Activity, Phone, ArrowRight,
+  DollarSign, Zap, Activity, Phone, ArrowRight, ChevronDown,
 } from "lucide-react";
 
 /* ── Error Boundary ─────────────────────────────────── */
@@ -175,6 +175,92 @@ function NichoTile({ name, total, contactados }: { name: string; total: number; 
       </div>
       <p className="text-[10px] text-(--color-text-muted) mt-1">{contactados} contactados</p>
     </div>
+  );
+}
+
+/* ── Normalizar nombre de país ──────────────────────── */
+function normalizarPais(p: string): string {
+  const mapa: Record<string, string> = {
+    "Mexico": "México", "Mexiko": "México",
+    "Peru": "Perú", "Espana": "España", "Espagna": "España",
+  };
+  return mapa[p] ?? p;
+}
+
+/* ── Nichos expandible ──────────────────────────────── */
+function NichosSection({ nichos, total }: { nichos: { nicho: string; total: number; contactados: number }[]; total: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const VISIBLE = 12;
+  const visible = expanded ? nichos : nichos.slice(0, VISIBLE);
+  const resto = nichos.length - VISIBLE;
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Negocios / Contactados</p>
+        <p className="text-[10px] text-(--color-text-muted)">{total.toLocaleString()} leads · {nichos.length} nichos</p>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {visible.map(({ nicho, total: t, contactados }) => (
+          <NichoTile key={nicho} name={nicho} total={t} contactados={contactados} />
+        ))}
+      </div>
+      {nichos.length > VISIBLE && (
+        <button
+          onClick={() => setExpanded(e => !e)}
+          className="flex items-center gap-2 mx-auto text-[10px] text-(--color-text-muted) hover:text-(--color-text) transition-colors py-1 px-3 border border-(--color-border) rounded-full"
+        >
+          <ChevronDown size={12} className={`transition-transform ${expanded ? "rotate-180" : ""}`} />
+          {expanded ? "Ver menos" : `Ver ${resto} nichos más`}
+        </button>
+      )}
+    </>
+  );
+}
+
+/* ── Países ─────────────────────────────────────────── */
+function PaisesSection({ porPais }: { porPais: { pais: string; total: number }[] }) {
+  // Normalizar y deduplicar
+  const merged: Record<string, number> = {};
+  for (const { pais, total } of porPais) {
+    const key = normalizarPais(pais);
+    merged[key] = (merged[key] ?? 0) + total;
+  }
+  const lista = Object.entries(merged)
+    .map(([pais, total]) => ({ pais, total }))
+    .sort((a, b) => b.total - a.total);
+  const maxVal = lista[0]?.total ?? 1;
+  const totalContactados = lista.reduce((s, p) => s + p.total, 0);
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Cobertura por País</p>
+        <p className="text-[10px] text-(--color-text-muted)">{lista.length} países · {totalContactados.toLocaleString()} contactados</p>
+      </div>
+      <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5">
+          {lista.map(({ pais, total }) => {
+            const pct = Math.round((total / maxVal) * 100);
+            const pctReal = Math.round((total / totalContactados) * 100);
+            return (
+              <div key={pais} className="flex items-center gap-3">
+                <div className="w-32 shrink-0">
+                  <span className="text-[11px] font-semibold text-(--color-text)">{pais}</span>
+                </div>
+                <div className="flex-1 bg-(--color-surface) rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="h-full bg-[#00ff9d]/60 rounded-full transition-all duration-700"
+                    style={{ width: `${Math.max(pct, 2)}%` }}
+                  />
+                </div>
+                <span className="text-[11px] font-bold text-(--color-text) w-14 text-right">{total.toLocaleString()}</span>
+                <span className="text-[10px] text-(--color-text-faint) w-8 text-right">{pctReal}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -374,53 +460,12 @@ function DashboardContent() {
 
       {/* ── Nichos ── */}
       {nichosArr.length > 0 && (
-        <>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">
-              Negocios / Contactados
-            </p>
-            <p className="text-[10px] text-(--color-text-muted)">
-              {stats.total} leads · {nichosArr.length} nichos distintos
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {nichosArr.map(({ nicho, total, contactados }) => (
-              <NichoTile key={nicho} name={nicho} total={total} contactados={contactados} />
-            ))}
-          </div>
-        </>
+        <NichosSection nichos={nichosArr} total={stats.total} />
       )}
 
       {/* ── Por País ── */}
       {porPais && porPais.length > 0 && (
-        <>
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Cobertura por País</p>
-            <p className="text-[10px] text-(--color-text-muted)">{porPais.length} países con prospectos</p>
-          </div>
-          <div className="bg-(--color-base) border border-(--color-border) rounded-xl p-4">
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-              {porPais.map(({ pais, total }) => {
-                const pct = stats.total > 0 ? Math.round((total / stats.total) * 100) : 0;
-                return (
-                  <div key={pais} className="flex items-center gap-3">
-                    <div className="w-28 shrink-0">
-                      <span className="text-[11px] font-semibold text-(--color-text)">{pais}</span>
-                    </div>
-                    <div className="flex-1 bg-(--color-surface) rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className="h-full bg-[#00ff9d]/60 rounded-full transition-all duration-700"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-bold text-(--color-text) w-12 text-right">{total.toLocaleString()}</span>
-                    <span className="text-[10px] text-(--color-text-faint) w-8 text-right">{pct}%</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </>
+        <PaisesSection porPais={porPais} />
       )}
 
     </div>
