@@ -488,13 +488,9 @@ export const procesarMensaje = action({
     const esObjecion = respuesta.includes("[OBJECION]");
     const esRechazo = respuesta.includes("[RECHAZO]");
 
-    // Limpiar marcadores
+    // Limpiar CUALQUIER marcador [EN_MAYUSCULAS] o [TEXTO] que Claude haya generado
     let respuestaLimpia = respuesta
-      .replace(/\[LEAD_CALIFICADO\]/g, "")
-      .replace(/\[CITA_AGENDADA\]/g, "")
-      .replace(/\[LINK_ENVIADO\]/g, "")
-      .replace(/\[OBJECION\]/g, "")
-      .replace(/\[RECHAZO\]/g, "")
+      .replace(/\[[A-Z_\d]+\]/g, "")
       .trim();
 
     respuestaLimpia = await procesarMedia(respuestaLimpia, telefono, phoneId, token);
