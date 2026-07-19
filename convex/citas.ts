@@ -46,3 +46,17 @@ export const actualizarNotas = mutation({
     await ctx.db.patch(id, { notas });
   },
 });
+
+export const actualizarFecha = mutation({
+  args: { id: v.id("citas"), fechaCita: v.optional(v.number()) },
+  handler: async (ctx, { id, fechaCita }) => {
+    await ctx.db.patch(id, { fechaCita });
+  },
+});
+
+export const eliminar = mutation({
+  args: { id: v.id("citas") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id);
+  },
+});

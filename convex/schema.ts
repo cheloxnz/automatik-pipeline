@@ -84,6 +84,7 @@ export default defineSchema({
     prospectNicho: v.optional(v.string()),
     estado: v.union(v.literal("pendiente"), v.literal("realizada"), v.literal("cancelada")),
     notas: v.optional(v.string()),
+    fechaCita: v.optional(v.number()),
     createdAt: v.number(),
   }).index("by_estado", ["estado"])
     .index("by_createdAt", ["createdAt"]),

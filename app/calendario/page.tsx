@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, Phone, Check, X, Clock, StickyNote, ExternalLink, Bell } from "lucide-react";
+import { CalendarDays, Phone, Check, X, Clock, StickyNote, ExternalLink, Bell, Trash2, Pencil } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,6 +25,7 @@ type Cita = {
   prospectNicho?: string;
   estado: "pendiente" | "realizada" | "cancelada";
   notas?: string;
+  fechaCita?: number;
   createdAt: number;
 };
 
@@ -40,11 +41,22 @@ const CITA_BADGE: Record<string, string> = {
   cancelada:  "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
 
+function toDatetimeLocal(ms: number) {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function CitaCard({ cita }: { cita: Cita }) {
   const actualizarEstado = useMutation(api.citas.actualizarEstado);
   const actualizarNotas = useMutation(api.citas.actualizarNotas);
+  const actualizarFecha = useMutation(api.citas.actualizarFecha);
+  const eliminar = useMutation(api.citas.eliminar);
   const [editNota, setEditNota] = useState(false);
   const [nota, setNota] = useState(cita.notas ?? "");
+  const [editFecha, setEditFecha] = useState(false);
+  const [fechaInput, setFechaInput] = useState(cita.fechaCita ? toDatetimeLocal(cita.fechaCita) : "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   return (
     <div className={`bg-[#161b22] border rounded-xl p-4 flex flex-col gap-3 transition-opacity ${cita.estado === "cancelada" ? "opacity-50" : ""}`}
@@ -69,15 +81,38 @@ function CitaCard({ cita }: { cita: Cita }) {
       </div>
 
       {/* contacto + fecha */}
-      <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
-        <span className="flex items-center gap-1.5 font-mono">
-          <Phone size={10} className="text-[#60a5fa]" />
-          +{cita.prospectTelefono}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <Clock size={10} />
-          {formatFecha(cita.createdAt)}
-        </span>
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
+          <span className="flex items-center gap-1.5 font-mono">
+            <Phone size={10} className="text-[#60a5fa]" />
+            +{cita.prospectTelefono}
+          </span>
+          <span className="flex items-center gap-1.5 text-[10px] text-[#484f58]">
+            <Clock size={9} />
+            guardado {formatFecha(cita.createdAt)}
+          </span>
+        </div>
+        {/* fecha de la cita acordada */}
+        {editFecha ? (
+          <div className="flex gap-2 items-center">
+            <input type="datetime-local" value={fechaInput} onChange={(e) => setFechaInput(e.target.value)}
+              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#00ff9d]/40" />
+            <button onClick={async () => {
+              const ms = fechaInput ? new Date(fechaInput).getTime() : undefined;
+              await actualizarFecha({ id: cita._id, fechaCita: ms });
+              setEditFecha(false);
+            }} className="p-1.5 bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40"><Check size={12} /></button>
+            <button onClick={() => setEditFecha(false)} className="p-1.5 bg-[#2a0e0e] border border-[#4a1a1a] rounded-lg text-[#f87171] hover:bg-[#4a1a1a]/40"><X size={12} /></button>
+          </div>
+        ) : (
+          <button onClick={() => setEditFecha(true)} className="flex items-center gap-1.5 text-left group">
+            <CalendarDays size={10} className={cita.fechaCita ? "text-[#f59e0b]" : "text-[#484f58] group-hover:text-[#8b949e]"} />
+            <span className={`text-[11px] font-medium ${cita.fechaCita ? "text-[#f59e0b]" : "text-[#484f58] italic group-hover:text-[#8b949e]"} transition-colors`}>
+              {cita.fechaCita ? formatFecha(cita.fechaCita) : "Agregar fecha de la cita..."}
+            </span>
+            <Pencil size={9} className="text-[#484f58] opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+          </button>
+        )}
       </div>
 
       {/* nota */}
@@ -106,23 +141,42 @@ function CitaCard({ cita }: { cita: Cita }) {
       </div>
 
       {/* acciones */}
-      {cita.estado === "pendiente" ? (
-        <div className="flex gap-2 pt-1 border-t border-[#21262d]">
-          <button onClick={() => actualizarEstado({ id: cita._id, estado: "realizada" })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 transition-colors">
-            <Check size={11} /> Realizada
+      <div className="flex flex-col gap-2 pt-1 border-t border-[#21262d]">
+        {cita.estado === "pendiente" ? (
+          <div className="flex gap-2">
+            <button onClick={() => actualizarEstado({ id: cita._id, estado: "realizada" })}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 transition-colors">
+              <Check size={11} /> Realizada
+            </button>
+            <button onClick={() => actualizarEstado({ id: cita._id, estado: "cancelada" })}
+              className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#2a0e0e] border border-[#4a1a1a] rounded-lg text-[#f87171] hover:bg-[#4a1a1a]/40 transition-colors">
+              <X size={11} /> Cancelada
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => actualizarEstado({ id: cita._id, estado: "pendiente" })}
+            className="w-full py-1.5 text-[11px] font-medium text-[#484f58] hover:text-[#8b949e] border border-[#21262d] rounded-lg hover:border-[#30363d] transition-colors">
+            Revertir a pendiente
           </button>
-          <button onClick={() => actualizarEstado({ id: cita._id, estado: "cancelada" })}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#2a0e0e] border border-[#4a1a1a] rounded-lg text-[#f87171] hover:bg-[#4a1a1a]/40 transition-colors">
-            <X size={11} /> Cancelada
+        )}
+        {confirmDelete ? (
+          <div className="flex gap-2">
+            <button onClick={async () => { await eliminar({ id: cita._id }); setConfirmDelete(false); }}
+              className="flex-1 py-1.5 text-[11px] font-semibold bg-[#3d0a0a] border border-[#7f1d1d] rounded-lg text-[#fca5a5] hover:bg-[#7f1d1d]/40 transition-colors">
+              Confirmar eliminación
+            </button>
+            <button onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 text-[11px] text-[#484f58] border border-[#21262d] rounded-lg hover:text-[#8b949e] transition-colors">
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            className="flex items-center justify-center gap-1.5 py-1 text-[10px] text-[#484f58] hover:text-[#f87171] transition-colors">
+            <Trash2 size={10} /> Eliminar cita
           </button>
-        </div>
-      ) : (
-        <button onClick={() => actualizarEstado({ id: cita._id, estado: "pendiente" })}
-          className="w-full py-1.5 text-[11px] font-medium text-[#484f58] hover:text-[#8b949e] border border-[#21262d] rounded-lg hover:border-[#30363d] transition-colors">
-          Revertir a pendiente
-        </button>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -226,8 +280,8 @@ export default function Calendario() {
     ...citasVis.map((c): Item => ({ tipo: "cita", data: c })),
     ...recsVis.map((r): Item => ({ tipo: "rec", data: r })),
   ].sort((a, b) => {
-    const aMs = a.tipo === "cita" ? a.data.createdAt : a.data.fechaMs;
-    const bMs = b.tipo === "cita" ? b.data.createdAt : b.data.fechaMs;
+    const aMs = a.tipo === "cita" ? (a.data.fechaCita ?? a.data.createdAt) : a.data.fechaMs;
+    const bMs = b.tipo === "cita" ? (b.data.fechaCita ?? b.data.createdAt) : b.data.fechaMs;
     return bMs - aMs;
   });
 
