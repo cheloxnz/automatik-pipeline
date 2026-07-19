@@ -277,8 +277,7 @@ function AlertasPanel() {
   const marcarTodas = useMutation(api.alertas.marcarTodasLeidas);
   const marcarUna   = useMutation(api.alertas.marcarLeida);
 
-  if (!alertas || alertas.length === 0) return null;
-  const noLeidas = alertas.filter(a => !a.leida).length;
+  const noLeidas = (alertas ?? []).filter(a => !a.leida).length;
 
   return (
     <>
@@ -296,7 +295,15 @@ function AlertasPanel() {
         )}
       </div>
       <div className="space-y-2">
-        {alertas.map(a => {
+        {!alertas && (
+          <div className="text-[11px] text-(--color-text-muted) py-3 text-center">Cargando...</div>
+        )}
+        {alertas && alertas.length === 0 && (
+          <div className="text-[11px] text-(--color-text-muted) py-3 text-center border border-(--color-border) rounded-xl">
+            Sin alertas aún — aparecerán cuando el bot agende citas, detecte leads o conversaciones largas
+          </div>
+        )}
+        {(alertas ?? []).map(a => {
           const cfg = ALERTA_CONFIG[a.tipo] ?? { label: a.tipo, color: "#8b949e", bg: "#8b949e15" };
           const ts = new Date(a.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
           return (
