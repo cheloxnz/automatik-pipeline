@@ -66,6 +66,16 @@ export default defineSchema({
     .index("by_estado_actividad", ["estado", "ultimaActividad"])
     .index("by_estado_nicho", ["estado", "nicho"])
     .searchIndex("search_nombre", { searchField: "nombre", filterFields: ["estado"] }),
+  alertas: defineTable({
+    tipo: v.string(), // "lead_calificado" | "cita_agendada" | "conv_larga" | "objecion"
+    prospectNombre: v.string(),
+    prospectTelefono: v.string(),
+    prospectId: v.optional(v.id("prospects")),
+    detalle: v.optional(v.string()),
+    leida: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_leida", ["leida"])
+    .index("by_createdAt", ["createdAt"]),
   citas: defineTable({
     prospectId: v.optional(v.id("prospects")),
     prospectNombre: v.string(),

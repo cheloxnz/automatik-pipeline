@@ -1,5 +1,5 @@
 "use client";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Component, ReactNode, useState, useEffect } from "react";
 import {
@@ -264,6 +264,67 @@ function PaisesSection({ porPais }: { porPais: { pais: string; total: number }[]
   );
 }
 
+/* ── Alertas ─────────────────────────────────────────── */
+const ALERTA_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  cita_agendada:  { label: "Cita agendada",      color: "#00ff9d", bg: "#00ff9d15" },
+  lead_calificado:{ label: "Lead calificado",     color: "#f59e0b", bg: "#f59e0b15" },
+  conv_larga:     { label: "Conversación larga",  color: "#58a6ff", bg: "#58a6ff15" },
+  objecion:       { label: "Objeción detectada",  color: "#f85149", bg: "#f8514915" },
+};
+
+function AlertasPanel() {
+  const alertas = useQuery(api.alertas.recientes);
+  const marcarTodas = useMutation(api.alertas.marcarTodasLeidas);
+  const marcarUna   = useMutation(api.alertas.marcarLeida);
+
+  if (!alertas || alertas.length === 0) return null;
+  const noLeidas = alertas.filter(a => !a.leida).length;
+
+  return (
+    <>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] text-(--color-text-muted) uppercase tracking-[3px]">Alertas del bot</p>
+          {noLeidas > 0 && (
+            <span className="text-[10px] bg-[#f85149] text-white px-2 py-0.5 rounded-full font-bold">{noLeidas} nuevas</span>
+          )}
+        </div>
+        {noLeidas > 0 && (
+          <button onClick={() => marcarTodas({})} className="text-[10px] text-(--color-text-muted) hover:text-(--color-text) transition-colors">
+            Marcar todas como leídas
+          </button>
+        )}
+      </div>
+      <div className="space-y-2">
+        {alertas.map(a => {
+          const cfg = ALERTA_CONFIG[a.tipo] ?? { label: a.tipo, color: "#8b949e", bg: "#8b949e15" };
+          const ts = new Date(a.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+          return (
+            <div
+              key={a._id}
+              onClick={() => !a.leida && marcarUna({ id: a._id })}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors cursor-pointer ${
+                a.leida ? "border-(--color-border) opacity-50" : "border-opacity-30"
+              }`}
+              style={a.leida ? {} : { borderColor: cfg.color + "50", backgroundColor: cfg.bg }}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: a.leida ? "#484f58" : cfg.color }} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold" style={{ color: cfg.color }}>{cfg.label}</span>
+                  <span className="text-[10px] text-(--color-text-faint)">{ts}</span>
+                </div>
+                <p className="text-[11px] text-(--color-text) truncate">{a.prospectNombre}</p>
+                {a.detalle && <p className="text-[10px] text-(--color-text-muted)">{a.detalle} · +{a.prospectTelefono}</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 /* ── Dashboard ──────────────────────────────────────── */
 const TICKET = 500;
 const COSTO_SISTEMA = 30;
@@ -457,6 +518,9 @@ function DashboardContent() {
           </div>
         ))}
       </div>
+
+      {/* ── Alertas ── */}
+      <AlertasPanel />
 
       {/* ── Nichos ── */}
       {nichosArr.length > 0 && (

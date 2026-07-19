@@ -512,11 +512,16 @@ export const procesarMensaje = action({
       await enviarTexto(adminPhone, msg, phoneId, token);
     }
 
-    if (esObjecion && adminPhone) {
+    if (esObjecion) {
       const negocio = prospect?.nombre ?? "Desconocido";
-      const msg = `⚠️ *Posible freno en la conversación*\n\n🏢 *Negocio:* ${negocio}${prospect?.ciudad ? ` (${prospect.ciudad})` : ""}\n📱 *Tel:* +${telNorm}\n\n_El prospecto mostró dudas u objeciones. Puede ser buen momento para que entres vos._`;
-      console.log(`[OBJECION] ${negocio} | +${telNorm}`);
-      await enviarTexto(adminPhone, msg, phoneId, token);
+      await ctx.runMutation(api.alertas.crear, {
+        tipo: "objecion", prospectNombre: negocio, prospectTelefono: telNorm,
+        prospectId: pid, detalle: `Objeción detectada`,
+      });
+      if (adminPhone) {
+        const msg = `⚠️ *Objeción detectada*\n\n🏢 *Negocio:* ${negocio}${prospect?.ciudad ? ` (${prospect.ciudad})` : ""}\n📱 *Tel:* +${telNorm}\n\n_El prospecto frenó. Buen momento para intervenir._`;
+        await enviarTexto(adminPhone, msg, phoneId, token);
+      }
     }
 
     if (esRechazo) {
@@ -541,36 +546,40 @@ export const procesarMensaje = action({
           prospectNicho: prospect?.nicho,
         });
       }
+      const tipoAlerta = esCitaAgendada ? "cita_agendada" : "lead_calificado";
+      await ctx.runMutation(api.alertas.crear, {
+        tipo: tipoAlerta,
+        prospectNombre: prospect?.nombre ?? "Desconocido",
+        prospectTelefono: telNorm,
+        prospectId: pid,
+        detalle: esCitaAgendada ? "Confirmó agenda" : "Aceptó hablar con Marcelo",
+      });
       const alertaLead = esCitaAgendada
-        ? `🗓️ *¡Cita agendada!*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}\n\n_El prospecto confirmó que agenda. Revisá tu Cal.com._`
-        : `🔔 *Nuevo lead calificado!*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}\n\n_Revisá la conversación en el dashboard_`;
-      console.log(`[${esCitaAgendada ? "CITA_AGENDADA" : "LEAD_CALIFICADO"}] ${prospect?.nombre ?? telNorm} | +${telNorm}`);
+        ? `🗓️ *¡Cita agendada!*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}\n\n_Revisá tu Cal.com._`
+        : `🔔 *Nuevo lead calificado!*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}`;
+      console.log(`[${tipoAlerta.toUpperCase()}] ${prospect?.nombre ?? telNorm} | +${telNorm}`);
       if (adminPhone) {
         const ok = await enviarTexto(adminPhone, alertaLead, phoneId, token);
-        if (!ok) console.error(`[ALERTA] No se pudo enviar notificación a ${adminPhone} — verificá la ventana 24hs de WhatsApp`);
+        if (!ok) console.error(`[ALERTA] Ventana 24hs cerrada — notificación guardada en dashboard`);
       }
     } else {
       const nuevoStep = Math.min(step + 1, 2);
       await ctx.runMutation(api.bot.upsertConversacion, { telefono, prospectId: pid, step: nuevoStep });
 
-      // Notificar al admin cuando la conversación llega a step 2
-      if (nuevoStep === 2 && step < 2) {
-        const alerta = `💬 *Conversación activa — revisala*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}\n\n_El prospecto está respondiendo. Puede ser momento de intervenir._`;
-        console.log(`[CONV_ACTIVA] step2 alcanzado | +${telNorm} | ${prospect?.nombre ?? "sin match"}`);
+      // Escalación: avisar al admin si la conv tiene 8+ mensajes sin cerrar
+      const totalMsgs = historialDB.length;
+      const UMBRAL = 8;
+      if (totalMsgs >= UMBRAL && totalMsgs % 4 === 0) {
+        const negocio = prospect?.nombre ?? "Desconocido";
+        await ctx.runMutation(api.alertas.crear, {
+          tipo: "conv_larga",
+          prospectNombre: negocio,
+          prospectTelefono: telNorm,
+          prospectId: pid,
+          detalle: `${totalMsgs} mensajes sin cerrar`,
+        });
         if (adminPhone) {
-          const ok = await enviarTexto(adminPhone, alerta, phoneId, token);
-          if (!ok) console.error(`[ALERTA] No se pudo enviar notificación de conv activa a ${adminPhone}`);
-        }
-      }
-
-      // ── MEJORA 4: Escalación automática por conversación larga sin cierre ──
-      // Si hay 12+ mensajes en la conv y sigue sin calificar, avisar al admin
-      if (adminPhone && nuevoStep === 2) {
-        const totalMsgs = historialDB.length;
-        if (totalMsgs >= 12 && totalMsgs % 4 === 0) {
-          // Avisar cada 4 mensajes a partir de los 12 (no spamear)
-          const msg = `🔄 *Conversación larga sin cierre*\n\n🏢 *Negocio:* ${prospect?.nombre ?? "Desconocido"} (${prospect?.ciudad ?? ""})\n📱 *Tel:* +${telNorm}\n💬 *Mensajes:* ${totalMsgs}\n\n_El bot lleva ${totalMsgs} mensajes sin cerrar. Puede ser buen momento para que entres vos._`;
-          console.log(`[ESCALACION] ${prospect?.nombre ?? telNorm} | ${totalMsgs} mensajes | +${telNorm}`);
+          const msg = `🔄 *Conversación larga — intervení*\n\n🏢 *Negocio:* ${negocio}${prospect?.ciudad ? ` (${prospect.ciudad})` : ""}\n📱 *Tel:* +${telNorm}\n💬 *Mensajes:* ${totalMsgs}`;
           await enviarTexto(adminPhone, msg, phoneId, token);
         }
       }
