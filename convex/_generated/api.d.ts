@@ -9,6 +9,7 @@
  */
 
 import type * as actions from "../actions.js";
+import type * as alertas from "../alertas.js";
 import type * as bot from "../bot.js";
 import type * as citas from "../citas.js";
 import type * as crons from "../crons.js";
@@ -25,6 +26,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   actions: typeof actions;
+  alertas: typeof alertas;
   bot: typeof bot;
   citas: typeof citas;
   crons: typeof crons;
