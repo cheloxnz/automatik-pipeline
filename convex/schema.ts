@@ -89,7 +89,7 @@ export default defineSchema({
   }).index("by_estado", ["estado"])
     .index("by_createdAt", ["createdAt"]),
   recordatorios: defineTable({
-    prospectId: v.id("prospects"),
+    prospectId: v.optional(v.id("prospects")),
     prospectNombre: v.string(),
     prospectTelefono: v.optional(v.string()),
     nota: v.optional(v.string()),

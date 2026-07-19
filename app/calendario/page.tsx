@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, Phone, Check, X, Clock, StickyNote, ExternalLink, Bell, Trash2, Pencil } from "lucide-react";
+import { CalendarDays, Phone, Check, X, Clock, StickyNote, ExternalLink, Bell, Trash2, Pencil, Plus, LayoutList, Calendar } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,22 @@ function formatFecha(ms: number) {
   });
 }
 
-// ── Cita card ─────────────────────────────────────────────────────────────────
+function toDatetimeLocal(ms: number) {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function startOfWeek(date: Date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 type Cita = {
   _id: Id<"citas">;
@@ -29,6 +44,18 @@ type Cita = {
   createdAt: number;
 };
 
+type Recordatorio = {
+  _id: Id<"recordatorios">;
+  prospectNombre: string;
+  prospectTelefono?: string;
+  nota?: string;
+  fechaMs: number;
+  estado: "pendiente" | "activo" | "cerrado";
+  createdAt: number;
+};
+
+// ── Cita card ─────────────────────────────────────────────────────────────────
+
 const CITA_BORDER: Record<string, string> = {
   pendiente: "#3d2a00",
   realizada: "#0f3d28",
@@ -40,12 +67,6 @@ const CITA_BADGE: Record<string, string> = {
   realizada:  "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
   cancelada:  "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]",
 };
-
-function toDatetimeLocal(ms: number) {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 function CitaCard({ cita }: { cita: Cita }) {
   const actualizarEstado = useMutation(api.citas.actualizarEstado);
@@ -62,7 +83,6 @@ function CitaCard({ cita }: { cita: Cita }) {
     <div className={`bg-[#161b22] border rounded-xl p-4 flex flex-col gap-3 transition-opacity ${cita.estado === "cancelada" ? "opacity-50" : ""}`}
       style={{ borderColor: CITA_BORDER[cita.estado] }}>
 
-      {/* tipo */}
       <div className="flex items-center gap-1.5">
         <CalendarDays size={10} className="text-[#00ff9d]" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#00ff9d]">Cita agendada</span>
@@ -72,7 +92,6 @@ function CitaCard({ cita }: { cita: Cita }) {
         </span>
       </div>
 
-      {/* nombre */}
       <div>
         <p className="font-semibold text-[#e6edf3] text-[14px] leading-tight">{cita.prospectNombre}</p>
         <p className="text-[10px] text-[#484f58] mt-0.5">
@@ -80,7 +99,6 @@ function CitaCard({ cita }: { cita: Cita }) {
         </p>
       </div>
 
-      {/* contacto + fecha */}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
           <span className="flex items-center gap-1.5 font-mono">
@@ -92,7 +110,6 @@ function CitaCard({ cita }: { cita: Cita }) {
             guardado {formatFecha(cita.createdAt)}
           </span>
         </div>
-        {/* fecha de la cita acordada */}
         {editFecha ? (
           <div className="flex gap-2 items-center">
             <input type="datetime-local" value={fechaInput} onChange={(e) => setFechaInput(e.target.value)}
@@ -115,7 +132,6 @@ function CitaCard({ cita }: { cita: Cita }) {
         )}
       </div>
 
-      {/* nota */}
       <div>
         {editNota ? (
           <div className="flex gap-2">
@@ -140,7 +156,6 @@ function CitaCard({ cita }: { cita: Cita }) {
         )}
       </div>
 
-      {/* acciones */}
       <div className="flex flex-col gap-2 pt-1 border-t border-[#21262d]">
         {cita.estado === "pendiente" ? (
           <div className="flex gap-2">
@@ -183,16 +198,6 @@ function CitaCard({ cita }: { cita: Cita }) {
 
 // ── Recordatorio card ─────────────────────────────────────────────────────────
 
-type Recordatorio = {
-  _id: Id<"recordatorios">;
-  prospectNombre: string;
-  prospectTelefono?: string;
-  nota?: string;
-  fechaMs: number;
-  estado: "pendiente" | "activo" | "cerrado";
-  createdAt: number;
-};
-
 function RecordatorioCard({ rec }: { rec: Recordatorio }) {
   const cerrar = useMutation(api.recordatorios.cerrar);
   const vencido = rec.fechaMs < Date.now();
@@ -217,7 +222,6 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
     <div className={`bg-[#161b22] border rounded-xl p-4 flex flex-col gap-3 transition-opacity ${rec.estado === "cerrado" ? "opacity-40" : ""}`}
       style={{ borderColor }}>
 
-      {/* tipo */}
       <div className="flex items-center gap-1.5">
         <Bell size={10} className="text-[#60a5fa]" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#60a5fa]">Recordatorio</span>
@@ -225,13 +229,11 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge}`}>{badgeLabel}</span>
       </div>
 
-      {/* nombre */}
       <div>
         <p className="font-semibold text-[#e6edf3] text-[14px] leading-tight">{rec.prospectNombre}</p>
         {rec.nota && <p className="text-[11px] text-[#8b949e] mt-1">{rec.nota}</p>}
       </div>
 
-      {/* contacto + fecha */}
       <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
         {rec.prospectTelefono && (
           <span className="flex items-center gap-1.5 font-mono">
@@ -245,7 +247,6 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
         </span>
       </div>
 
-      {/* acción */}
       {rec.estado !== "cerrado" && (
         <div className="pt-1 border-t border-[#21262d]">
           <button onClick={() => cerrar({ id: rec._id })}
@@ -258,23 +259,205 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
   );
 }
 
+// ── Form nuevo recordatorio ───────────────────────────────────────────────────
+
+function NuevoRecordatorioForm({ onClose }: { onClose: () => void }) {
+  const crear = useMutation(api.recordatorios.crear);
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [nota, setNota] = useState("");
+  const [fecha, setFecha] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!nombre.trim() || !fecha) return;
+    setLoading(true);
+    try {
+      await crear({
+        prospectNombre: nombre.trim(),
+        prospectTelefono: telefono.trim() || undefined,
+        nota: nota.trim() || undefined,
+        fechaMs: new Date(fecha).getTime(),
+      });
+      onClose();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-[#161b22] border border-[#1e3a5f] rounded-xl p-4 flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Bell size={12} className="text-[#60a5fa]" />
+        <span className="text-[11px] font-bold uppercase tracking-widest text-[#60a5fa]">Nuevo recordatorio</span>
+        <div className="flex-1" />
+        <button onClick={onClose} className="text-[#484f58] hover:text-[#8b949e]"><X size={14} /></button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="col-span-2">
+          <label className="text-[10px] text-[#484f58] mb-1 block">Nombre *</label>
+          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del contacto"
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
+        </div>
+        <div>
+          <label className="text-[10px] text-[#484f58] mb-1 block">Teléfono</label>
+          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="549..."
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
+        </div>
+        <div>
+          <label className="text-[10px] text-[#484f58] mb-1 block">Fecha y hora *</label>
+          <input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)}
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40" />
+        </div>
+        <div className="col-span-2">
+          <label className="text-[10px] text-[#484f58] mb-1 block">Nota</label>
+          <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: llamar para hacer seguimiento"
+            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
+        </div>
+      </div>
+
+      <button onClick={handleSubmit} disabled={loading || !nombre.trim() || !fecha}
+        className="w-full py-2 text-[11px] font-semibold bg-[#1c2f4a] border border-[#1e3a5f] rounded-lg text-[#60a5fa] hover:bg-[#1e3a5f]/60 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+        {loading ? "Guardando..." : "Crear recordatorio"}
+      </button>
+    </div>
+  );
+}
+
+// ── Vista semana ──────────────────────────────────────────────────────────────
+
+const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+
+function VistaSemanaBadge({ tipo }: { tipo: "cita" | "rec" }) {
+  return tipo === "cita"
+    ? <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0" />
+    : <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] shrink-0" />;
+}
+
+function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: Recordatorio[] }) {
+  const [semanaOffset, setSemanaOffset] = useState(0);
+
+  const hoy = new Date();
+  const lunes = startOfWeek(hoy);
+  lunes.setDate(lunes.getDate() + semanaOffset * 7);
+
+  const dias = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(lunes);
+    d.setDate(lunes.getDate() + i);
+    return d;
+  });
+
+  const esMismoDia = (ms: number, day: Date) => {
+    const d = new Date(ms);
+    return d.getDate() === day.getDate() && d.getMonth() === day.getMonth() && d.getFullYear() === day.getFullYear();
+  };
+
+  const esHoy = (day: Date) => {
+    const h = new Date();
+    return day.getDate() === h.getDate() && day.getMonth() === h.getMonth() && day.getFullYear() === h.getFullYear();
+  };
+
+  return (
+    <div>
+      {/* Nav semana */}
+      <div className="flex items-center justify-between mb-4">
+        <button onClick={() => setSemanaOffset(o => o - 1)}
+          className="px-3 py-1.5 text-[11px] border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+          ← Anterior
+        </button>
+        <span className="text-[11px] text-[#8b949e]">
+          {dias[0].toLocaleDateString("es-AR", { day: "numeric", month: "short" })} — {dias[6].toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
+        </span>
+        <button onClick={() => setSemanaOffset(o => o + 1)}
+          className="px-3 py-1.5 text-[11px] border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+          Siguiente →
+        </button>
+      </div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-7 gap-1.5">
+        {dias.map((day, i) => {
+          const citasDelDia = citas.filter(c => c.fechaCita && esMismoDia(c.fechaCita, day) && c.estado === "pendiente");
+          const recsDelDia = recordatorios.filter(r => esMismoDia(r.fechaMs, day) && r.estado !== "cerrado");
+          const total = citasDelDia.length + recsDelDia.length;
+          const hoyDia = esHoy(day);
+
+          return (
+            <div key={i} className={`min-h-[120px] rounded-xl border p-2 flex flex-col gap-1.5 ${
+              hoyDia ? "border-[#00ff9d]/30 bg-[#00ff9d]/5" : "border-[#21262d] bg-[#0d1117]"
+            }`}>
+              <div className="text-center">
+                <p className="text-[9px] font-semibold uppercase tracking-widest text-[#484f58]">{DIAS[i]}</p>
+                <p className={`text-[16px] font-bold leading-tight ${hoyDia ? "text-[#00ff9d]" : "text-[#e6edf3]"}`}>
+                  {day.getDate()}
+                </p>
+                {total > 0 && (
+                  <span className="text-[9px] font-semibold text-[#484f58]">{total} evento{total > 1 ? "s" : ""}</span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 flex-1">
+                {citasDelDia.map(c => (
+                  <div key={c._id} className="flex items-start gap-1 bg-[#251a00] border border-[#3d2a00] rounded-lg px-1.5 py-1">
+                    <VistaSemanaBadge tipo="cita" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold text-[#f59e0b] truncate leading-tight">{c.prospectNombre}</p>
+                      {c.fechaCita && (
+                        <p className="text-[8px] text-[#8b949e]">
+                          {new Date(c.fechaCita).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                {recsDelDia.map(r => (
+                  <div key={r._id} className="flex items-start gap-1 bg-[#0e1c35] border border-[#1e3a5f] rounded-lg px-1.5 py-1">
+                    <VistaSemanaBadge tipo="rec" />
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-semibold text-[#60a5fa] truncate leading-tight">{r.prospectNombre}</p>
+                      <p className="text-[8px] text-[#8b949e]">
+                        {new Date(r.fechaMs).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Leyenda */}
+      <div className="flex items-center gap-4 mt-3 justify-end">
+        <span className="flex items-center gap-1.5 text-[10px] text-[#484f58]">
+          <span className="w-2 h-2 rounded-full bg-[#f59e0b]" /> Cita agendada
+        </span>
+        <span className="flex items-center gap-1.5 text-[10px] text-[#484f58]">
+          <span className="w-2 h-2 rounded-full bg-[#60a5fa]" /> Recordatorio
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // ── Página principal ──────────────────────────────────────────────────────────
 
 type Seccion = "todo" | "citas" | "recordatorios";
+type Vista = "lista" | "semana";
 
 export default function Calendario() {
   const citas = useQuery(api.citas.list);
   const recordatorios = useQuery(api.recordatorios.listPendientes);
   const [seccion, setSeccion] = useState<Seccion>("todo");
+  const [vista, setVista] = useState<Vista>("lista");
+  const [mostrarFormRec, setMostrarFormRec] = useState(false);
 
   const citasList = (citas ?? []) as Cita[];
   const recsList = (recordatorios ?? []) as Recordatorio[];
 
-  // incluir cerrados solo si el usuario los busca explícitamente en sus propias secciones
   const citasVis = seccion === "recordatorios" ? [] : citasList;
   const recsVis = seccion === "citas" ? [] : recsList;
 
-  // ordenar todo junto por fecha más próxima
   type Item = { tipo: "cita"; data: Cita } | { tipo: "rec"; data: Recordatorio };
   const items: Item[] = [
     ...citasVis.map((c): Item => ({ tipo: "cita", data: c })),
@@ -306,11 +489,24 @@ export default function Calendario() {
             </p>
           </div>
         </div>
-        <a href="https://cal.com/marcelo-del-valle-bcgavl/30min" target="_blank" rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors">
-          <ExternalLink size={11} /> Cal.com
-        </a>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setMostrarFormRec(v => !v)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold bg-[#1c2f4a]/60 border border-[#1e3a5f] rounded-lg text-[#60a5fa] hover:bg-[#1e3a5f]/60 transition-colors">
+            <Plus size={11} /> Recordatorio
+          </button>
+          <a href="https://cal.com/marcelo-del-valle-bcgavl/30min" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold bg-[#00ff9d]/10 border border-[#00ff9d]/30 rounded-lg text-[#00ff9d] hover:bg-[#00ff9d]/20 transition-colors">
+            <ExternalLink size={11} /> Cal.com
+          </a>
+        </div>
       </div>
+
+      {/* Form nuevo recordatorio */}
+      {mostrarFormRec && (
+        <div className="mb-5">
+          <NuevoRecordatorioForm onClose={() => setMostrarFormRec(false)} />
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3 mb-6">
@@ -328,27 +524,41 @@ export default function Calendario() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-2 mb-5">
-        {([
-          { key: "todo", label: "Todo" },
-          { key: "citas", label: "Citas del bot" },
-          { key: "recordatorios", label: "Recordatorios" },
-        ] as { key: Seccion; label: string }[]).map(({ key, label }) => (
-          <button key={key} onClick={() => setSeccion(key)}
-            className={`px-3 py-1.5 text-[11px] font-semibold rounded-full border transition-colors ${
-              seccion === key
-                ? "bg-[#00ff9d]/10 border-[#00ff9d]/30 text-[#00ff9d]"
-                : "border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58]"
-            }`}>
-            {label}
+      {/* Tabs + toggle vista */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex gap-2">
+          {([
+            { key: "todo", label: "Todo" },
+            { key: "citas", label: "Citas del bot" },
+            { key: "recordatorios", label: "Recordatorios" },
+          ] as { key: Seccion; label: string }[]).map(({ key, label }) => (
+            <button key={key} onClick={() => setSeccion(key)}
+              className={`px-3 py-1.5 text-[11px] font-semibold rounded-full border transition-colors ${
+                seccion === key
+                  ? "bg-[#00ff9d]/10 border-[#00ff9d]/30 text-[#00ff9d]"
+                  : "border-[#30363d] text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58]"
+              }`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1 bg-[#0d1117] border border-[#21262d] rounded-lg p-0.5">
+          <button onClick={() => setVista("lista")}
+            className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-md transition-colors ${vista === "lista" ? "bg-[#21262d] text-[#e6edf3]" : "text-[#484f58] hover:text-[#8b949e]"}`}>
+            <LayoutList size={11} /> Lista
           </button>
-        ))}
+          <button onClick={() => setVista("semana")}
+            className={`flex items-center gap-1 px-2.5 py-1 text-[10px] font-semibold rounded-md transition-colors ${vista === "semana" ? "bg-[#21262d] text-[#e6edf3]" : "text-[#484f58] hover:text-[#8b949e]"}`}>
+            <Calendar size={11} /> Semana
+          </button>
+        </div>
       </div>
 
-      {/* Lista */}
+      {/* Contenido */}
       {loading ? (
         <div className="text-center text-[#484f58] py-16 text-sm">Cargando...</div>
+      ) : vista === "semana" ? (
+        <VistaSemana citas={citasVis} recordatorios={recsVis} />
       ) : items.length === 0 ? (
         <div className="text-center py-20">
           <CalendarDays size={32} className="text-[#30363d] mx-auto mb-3" />

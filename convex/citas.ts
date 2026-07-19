@@ -20,6 +20,7 @@ export const crear = mutation({
     prospectCiudad: v.optional(v.string()),
     prospectNicho: v.optional(v.string()),
     notas: v.optional(v.string()),
+    fechaCita: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     return await ctx.db.insert("citas", {

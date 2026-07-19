@@ -46,7 +46,7 @@ export const listPendientes = query({
 // ── Mutations ─────────────────────────────────────────────────────────────
 export const crear = mutation({
   args: {
-    prospectId: v.id("prospects"),
+    prospectId: v.optional(v.id("prospects")),
     prospectNombre: v.string(),
     prospectTelefono: v.optional(v.string()),
     nota: v.optional(v.string()),
@@ -135,6 +135,37 @@ export const chequearRecordatorios = action({
         await enviarWA(adminPhone, msg, phoneId, token);
         await ctx.runMutation(api.recordatorios.activar, { id: rec._id });
       }
+    }
+
+    // Chequear citas con fechaCita en las próximas 24hs
+    const citas = await ctx.runQuery(api.citas.list);
+    const en24h = ahora + 24 * 60 * 60 * 1000;
+    for (const cita of citas) {
+      if (cita.estado !== "pendiente") continue;
+      if (!cita.fechaCita) continue;
+      if (cita.fechaCita < ahora || cita.fechaCita > en24h) continue;
+      // Solo avisar si todavía no se avisó (usamos alertas para deduplicar)
+      const yaAvisada = await ctx.runQuery(api.alertas.noLeidas);
+      const duplicada = yaAvisada.some(
+        (a: { tipo: string; prospectTelefono: string }) =>
+          a.tipo === "cita_proxima" && a.prospectTelefono === cita.prospectTelefono
+      );
+      if (duplicada) continue;
+
+      const fecha = new Date(cita.fechaCita).toLocaleString("es-AR", {
+        weekday: "short", day: "numeric", month: "short",
+        hour: "2-digit", minute: "2-digit",
+        timeZone: "America/Argentina/Buenos_Aires",
+      });
+      await ctx.runMutation(api.alertas.crear, {
+        tipo: "cita_proxima",
+        prospectNombre: cita.prospectNombre,
+        prospectTelefono: cita.prospectTelefono,
+        prospectId: cita.prospectId,
+        detalle: `Cita en menos de 24hs — ${fecha}`,
+      });
+      const msg = `📅 *Cita mañana con ${cita.prospectNombre}*\n\n📱 +${cita.prospectTelefono}\n🕐 ${fecha}\n\n_Recordá confirmar con ellos._`;
+      await enviarWA(adminPhone, msg, phoneId, token);
     }
   },
 });

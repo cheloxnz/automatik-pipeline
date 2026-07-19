@@ -538,12 +538,35 @@ export const procesarMensaje = action({
         await ctx.runMutation(api.prospects.update, { id: prospect._id, notas: `[Bot IA] Lead calificado`, estado: "respondio" });
       }
       if (esCitaAgendada) {
+        // Intentar extraer fecha/hora de la conversación
+        let fechaCita: number | undefined;
+        if (anthropicKey) {
+          try {
+            const ultimosMsgs = historialDB.slice(-8)
+              .map((m) => `${m.tipo === "entrante" ? "PROSPECTO" : "NICO"}: ${m.texto}`)
+              .join("\n");
+            const fechaRaw = await llamarClaude(
+              [{ role: "user", content: ultimosMsgs }],
+              `Extraé la fecha y hora de la reunión mencionada en estos mensajes. Respondé SOLO con un string ISO 8601 (ej: "2026-07-21T10:30:00") en zona horaria Argentina (UTC-3). Si no hay fecha/hora clara, respondé exactamente "null". Nada más.`,
+              anthropicKey,
+            );
+            const clean = fechaRaw.trim().replace(/"/g, "");
+            if (clean && clean !== "null") {
+              const parsed = new Date(clean);
+              if (!isNaN(parsed.getTime())) fechaCita = parsed.getTime();
+            }
+          } catch { /* best effort */ }
+        }
+        const nombreCita = prospect?.nombre && prospect.nombre !== "Desconocido"
+          ? prospect.nombre
+          : conv?.nombre ?? prospect?.nombre ?? "Desconocido";
         await ctx.runMutation(api.citas.crear, {
           prospectId: pid ?? undefined,
-          prospectNombre: prospect?.nombre ?? "Desconocido",
+          prospectNombre: nombreCita,
           prospectTelefono: telNorm,
           prospectCiudad: prospect?.ciudad,
           prospectNicho: prospect?.nicho,
+          fechaCita,
         });
       }
       const tipoAlerta = esCitaAgendada ? "cita_agendada" : "lead_calificado";
