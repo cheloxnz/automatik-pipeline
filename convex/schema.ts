@@ -65,7 +65,8 @@ export default defineSchema({
     .index("by_telefono", ["telefono"])
     .index("by_estado_actividad", ["estado", "ultimaActividad"])
     .index("by_estado_nicho", ["estado", "nicho"])
-    .searchIndex("search_nombre", { searchField: "nombre", filterFields: ["estado"] }),
+    .searchIndex("search_nombre", { searchField: "nombre", filterFields: ["estado"] })
+    .searchIndex("search_telefono", { searchField: "telefono", filterFields: ["estado"] }),
   alertas: defineTable({
     tipo: v.string(), // "lead_calificado" | "cita_agendada" | "conv_larga" | "objecion"
     prospectNombre: v.string(),

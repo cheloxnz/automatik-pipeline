@@ -7,28 +7,15 @@ export const searchProspectos = query({
   handler: async (ctx, { q, estado }) => {
     if (!q) return [];
 
-    // Si parece número de teléfono (6+ dígitos), buscar por teléfono en todos los estados
+    // Si parece número de teléfono (4+ dígitos), buscar con search index de teléfono
     const soloDigitos = q.replace(/\D/g, "");
-    if (soloDigitos.length >= 6) {
-      const last8 = soloDigitos.slice(-8);
-      const estados = estado && estado !== "todos"
-        ? [estado]
-        : ["pendiente", "enviado", "respondio", "no_interesado", "cerrado", "error"];
-      const resultados: { _id: string; telefono?: string; [k: string]: unknown }[] = [];
-      for (const est of estados) {
-        const candidates = await ctx.db
-          .query("prospects")
-          .withIndex("by_estado", (qi) => qi.eq("estado", est))
-          .filter((qi) => qi.neq(qi.field("telefono"), undefined))
-          .take(5000);
-        const matches = candidates.filter((p) => {
-          const t = (p.telefono ?? "").replace(/\D/g, "");
-          return t.endsWith(last8) || soloDigitos.endsWith(t.slice(-8));
-        });
-        resultados.push(...matches);
-        if (resultados.length >= 20) break;
-      }
-      if (resultados.length > 0) return resultados.slice(0, 20);
+    if (soloDigitos.length >= 4) {
+      const byTel = ctx.db.query("prospects").withSearchIndex("search_telefono", (s) => {
+        const base = s.search("telefono", soloDigitos);
+        return estado && estado !== "todos" ? base.eq("estado", estado) : base;
+      });
+      const resultados = await byTel.take(20);
+      if (resultados.length > 0) return resultados;
     }
 
     // Búsqueda por nombre (full-text)
