@@ -55,6 +55,25 @@ export const actualizarFecha = mutation({
   },
 });
 
+export const actualizar = mutation({
+  args: {
+    id: v.id("citas"),
+    prospectNombre: v.optional(v.string()),
+    prospectTelefono: v.optional(v.string()),
+    prospectCiudad: v.optional(v.string()),
+    prospectNicho: v.optional(v.string()),
+    notas: v.optional(v.string()),
+    fechaCita: v.optional(v.number()),
+  },
+  handler: async (ctx, { id, ...fields }) => {
+    const patch: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (v !== undefined) patch[k] = v;
+    }
+    await ctx.db.patch(id, patch);
+  },
+});
+
 export const eliminar = mutation({
   args: { id: v.id("citas") },
   handler: async (ctx, { id }) => {

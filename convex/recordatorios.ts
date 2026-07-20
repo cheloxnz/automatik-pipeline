@@ -70,6 +70,30 @@ export const cerrar = mutation({
   },
 });
 
+export const actualizar = mutation({
+  args: {
+    id: v.id("recordatorios"),
+    prospectNombre: v.optional(v.string()),
+    prospectTelefono: v.optional(v.string()),
+    nota: v.optional(v.string()),
+    fechaMs: v.optional(v.number()),
+  },
+  handler: async (ctx, { id, ...fields }) => {
+    const patch: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(fields)) {
+      if (v !== undefined) patch[k] = v;
+    }
+    await ctx.db.patch(id, patch);
+  },
+});
+
+export const eliminar = mutation({
+  args: { id: v.id("recordatorios") },
+  handler: async (ctx, { id }) => {
+    await ctx.db.delete(id);
+  },
+});
+
 export const marcarAvisoPrevio = mutation({
   args: { id: v.id("recordatorios") },
   handler: async (ctx, { id }) => {

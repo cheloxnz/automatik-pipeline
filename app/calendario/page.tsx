@@ -3,7 +3,10 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
-import { CalendarDays, Phone, Check, X, Clock, StickyNote, ExternalLink, Bell, Trash2, Pencil, Plus, LayoutList, Calendar } from "lucide-react";
+import {
+  CalendarDays, Phone, Check, X, Clock, ExternalLink,
+  Bell, Trash2, Pencil, Plus, LayoutList, Calendar,
+} from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -23,12 +26,25 @@ function toDatetimeLocal(ms: number) {
 
 function startOfWeek(date: Date) {
   const d = new Date(date);
-  const day = d.getDay(); // 0=Sun
-  const diff = day === 0 ? -6 : 1 - day; // Monday
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   d.setHours(0, 0, 0, 0);
   return d;
 }
+
+// ── Input helpers ─────────────────────────────────────────────────────────────
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-[10px] text-[#484f58] mb-1 block">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls = "w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#58a6ff]/40 placeholder-[#484f58]";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -57,11 +73,8 @@ type Recordatorio = {
 // ── Cita card ─────────────────────────────────────────────────────────────────
 
 const CITA_BORDER: Record<string, string> = {
-  pendiente: "#3d2a00",
-  realizada: "#0f3d28",
-  cancelada: "#4a1a1a",
+  pendiente: "#3d2a00", realizada: "#0f3d28", cancelada: "#4a1a1a",
 };
-
 const CITA_BADGE: Record<string, string> = {
   pendiente: "bg-[#251a00] text-[#f59e0b] border border-[#3d2a00]",
   realizada:  "bg-[#0a2218] text-[#34d399] border border-[#0f3d28]",
@@ -69,15 +82,92 @@ const CITA_BADGE: Record<string, string> = {
 };
 
 function CitaCard({ cita }: { cita: Cita }) {
+  const actualizar = useMutation(api.citas.actualizar);
   const actualizarEstado = useMutation(api.citas.actualizarEstado);
-  const actualizarNotas = useMutation(api.citas.actualizarNotas);
-  const actualizarFecha = useMutation(api.citas.actualizarFecha);
   const eliminar = useMutation(api.citas.eliminar);
-  const [editNota, setEditNota] = useState(false);
-  const [nota, setNota] = useState(cita.notas ?? "");
-  const [editFecha, setEditFecha] = useState(false);
-  const [fechaInput, setFechaInput] = useState(cita.fechaCita ? toDatetimeLocal(cita.fechaCita) : "");
+
+  const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // edit state
+  const [nombre, setNombre] = useState(cita.prospectNombre);
+  const [telefono, setTelefono] = useState(cita.prospectTelefono);
+  const [ciudad, setCiudad] = useState(cita.prospectCiudad ?? "");
+  const [nicho, setNicho] = useState(cita.prospectNicho ?? "");
+  const [notas, setNotas] = useState(cita.notas ?? "");
+  const [fechaInput, setFechaInput] = useState(cita.fechaCita ? toDatetimeLocal(cita.fechaCita) : "");
+
+  function resetEdit() {
+    setNombre(cita.prospectNombre);
+    setTelefono(cita.prospectTelefono);
+    setCiudad(cita.prospectCiudad ?? "");
+    setNicho(cita.prospectNicho ?? "");
+    setNotas(cita.notas ?? "");
+    setFechaInput(cita.fechaCita ? toDatetimeLocal(cita.fechaCita) : "");
+    setEditing(false);
+  }
+
+  async function guardar() {
+    setSaving(true);
+    try {
+      await actualizar({
+        id: cita._id,
+        prospectNombre: nombre.trim() || undefined,
+        prospectTelefono: telefono.trim() || undefined,
+        prospectCiudad: ciudad.trim() || undefined,
+        prospectNicho: nicho.trim() || undefined,
+        notas: notas.trim() || undefined,
+        fechaCita: fechaInput ? new Date(fechaInput).getTime() : undefined,
+      });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="bg-[#161b22] border border-[#58a6ff]/30 rounded-xl p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-1.5">
+          <CalendarDays size={10} className="text-[#00ff9d]" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[#00ff9d]">Editando cita</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Nombre">
+            <input value={nombre} onChange={e => setNombre(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Teléfono">
+            <input value={telefono} onChange={e => setTelefono(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Ciudad">
+            <input value={ciudad} onChange={e => setCiudad(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Rubro / Nicho">
+            <input value={nicho} onChange={e => setNicho(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Fecha de la cita">
+            <input type="datetime-local" value={fechaInput} onChange={e => setFechaInput(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Notas">
+            <input value={notas} onChange={e => setNotas(e.target.value)} placeholder="Notas..." className={inputCls} />
+          </Field>
+        </div>
+
+        <div className="flex gap-2 pt-1 border-t border-[#21262d]">
+          <button onClick={guardar} disabled={saving}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 disabled:opacity-40 transition-colors">
+            <Check size={11} /> {saving ? "Guardando..." : "Guardar"}
+          </button>
+          <button onClick={resetEdit}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+            <X size={11} /> Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-[#161b22] border rounded-xl p-4 flex flex-col gap-3 transition-opacity ${cita.estado === "cancelada" ? "opacity-50" : ""}`}
@@ -87,6 +177,10 @@ function CitaCard({ cita }: { cita: Cita }) {
         <CalendarDays size={10} className="text-[#00ff9d]" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#00ff9d]">Cita agendada</span>
         <div className="flex-1" />
+        <button onClick={() => setEditing(true)}
+          className="flex items-center gap-1 text-[10px] text-[#484f58] hover:text-[#8b949e] mr-2 transition-colors">
+          <Pencil size={10} /> Editar
+        </button>
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${CITA_BADGE[cita.estado]}`}>
           {cita.estado === "pendiente" ? "Pendiente" : cita.estado === "realizada" ? "Realizada" : "Cancelada"}
         </span>
@@ -99,60 +193,27 @@ function CitaCard({ cita }: { cita: Cita }) {
         </p>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1">
         <div className="flex items-center gap-4 text-[11px] text-[#8b949e]">
           <span className="flex items-center gap-1.5 font-mono">
             <Phone size={10} className="text-[#60a5fa]" />
             +{cita.prospectTelefono}
           </span>
           <span className="flex items-center gap-1.5 text-[10px] text-[#484f58]">
-            <Clock size={9} />
-            guardado {formatFecha(cita.createdAt)}
+            <Clock size={9} /> guardado {formatFecha(cita.createdAt)}
           </span>
         </div>
-        {editFecha ? (
-          <div className="flex gap-2 items-center">
-            <input type="datetime-local" value={fechaInput} onChange={(e) => setFechaInput(e.target.value)}
-              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-lg px-2 py-1 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#00ff9d]/40" />
-            <button onClick={async () => {
-              const ms = fechaInput ? new Date(fechaInput).getTime() : undefined;
-              await actualizarFecha({ id: cita._id, fechaCita: ms });
-              setEditFecha(false);
-            }} className="p-1.5 bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40"><Check size={12} /></button>
-            <button onClick={() => setEditFecha(false)} className="p-1.5 bg-[#2a0e0e] border border-[#4a1a1a] rounded-lg text-[#f87171] hover:bg-[#4a1a1a]/40"><X size={12} /></button>
-          </div>
+        {cita.fechaCita ? (
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-[#f59e0b]">
+            <CalendarDays size={10} /> {formatFecha(cita.fechaCita)}
+          </span>
         ) : (
-          <button onClick={() => setEditFecha(true)} className="flex items-center gap-1.5 text-left group">
-            <CalendarDays size={10} className={cita.fechaCita ? "text-[#f59e0b]" : "text-[#484f58] group-hover:text-[#8b949e]"} />
-            <span className={`text-[11px] font-medium ${cita.fechaCita ? "text-[#f59e0b]" : "text-[#484f58] italic group-hover:text-[#8b949e]"} transition-colors`}>
-              {cita.fechaCita ? formatFecha(cita.fechaCita) : "Agregar fecha de la cita..."}
-            </span>
-            <Pencil size={9} className="text-[#484f58] opacity-0 group-hover:opacity-100 transition-opacity ml-0.5" />
+          <button onClick={() => setEditing(true)} className="flex items-center gap-1.5 text-[11px] text-[#484f58] italic hover:text-[#8b949e] transition-colors text-left">
+            <CalendarDays size={10} /> Agregar fecha de la cita...
           </button>
         )}
-      </div>
-
-      <div>
-        {editNota ? (
-          <div className="flex gap-2">
-            <textarea value={nota} onChange={(e) => setNota(e.target.value)} rows={2}
-              placeholder="Agregá una nota..."
-              className="flex-1 bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#58a6ff]/40 resize-none placeholder-[#484f58]"
-            />
-            <div className="flex flex-col gap-1">
-              <button onClick={async () => { await actualizarNotas({ id: cita._id, notas: nota }); setEditNota(false); }}
-                className="p-1.5 bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40"><Check size={12} /></button>
-              <button onClick={() => { setNota(cita.notas ?? ""); setEditNota(false); }}
-                className="p-1.5 bg-[#2a0e0e] border border-[#4a1a1a] rounded-lg text-[#f87171] hover:bg-[#4a1a1a]/40"><X size={12} /></button>
-            </div>
-          </div>
-        ) : (
-          <button onClick={() => setEditNota(true)} className="flex items-start gap-1.5 text-left w-full group">
-            <StickyNote size={10} className="mt-0.5 shrink-0 text-[#484f58] group-hover:text-[#8b949e]" />
-            <span className={`text-[11px] ${cita.notas ? "text-[#8b949e]" : "text-[#484f58] italic"} group-hover:text-[#e6edf3] transition-colors`}>
-              {cita.notas || "Agregar nota..."}
-            </span>
-          </button>
+        {cita.notas && (
+          <p className="text-[11px] text-[#8b949e] mt-0.5">{cita.notas}</p>
         )}
       </div>
 
@@ -176,7 +237,7 @@ function CitaCard({ cita }: { cita: Cita }) {
         )}
         {confirmDelete ? (
           <div className="flex gap-2">
-            <button onClick={async () => { await eliminar({ id: cita._id }); setConfirmDelete(false); }}
+            <button onClick={() => eliminar({ id: cita._id })}
               className="flex-1 py-1.5 text-[11px] font-semibold bg-[#3d0a0a] border border-[#7f1d1d] rounded-lg text-[#fca5a5] hover:bg-[#7f1d1d]/40 transition-colors">
               Confirmar eliminación
             </button>
@@ -200,6 +261,42 @@ function CitaCard({ cita }: { cita: Cita }) {
 
 function RecordatorioCard({ rec }: { rec: Recordatorio }) {
   const cerrar = useMutation(api.recordatorios.cerrar);
+  const actualizar = useMutation(api.recordatorios.actualizar);
+  const eliminar = useMutation(api.recordatorios.eliminar);
+
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [nombre, setNombre] = useState(rec.prospectNombre);
+  const [telefono, setTelefono] = useState(rec.prospectTelefono ?? "");
+  const [nota, setNota] = useState(rec.nota ?? "");
+  const [fechaInput, setFechaInput] = useState(toDatetimeLocal(rec.fechaMs));
+
+  function resetEdit() {
+    setNombre(rec.prospectNombre);
+    setTelefono(rec.prospectTelefono ?? "");
+    setNota(rec.nota ?? "");
+    setFechaInput(toDatetimeLocal(rec.fechaMs));
+    setEditing(false);
+  }
+
+  async function guardar() {
+    setSaving(true);
+    try {
+      await actualizar({
+        id: rec._id,
+        prospectNombre: nombre.trim() || undefined,
+        prospectTelefono: telefono.trim() || undefined,
+        nota: nota.trim() || undefined,
+        fechaMs: fechaInput ? new Date(fechaInput).getTime() : undefined,
+      });
+      setEditing(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const vencido = rec.fechaMs < Date.now();
 
   const borderColor = rec.estado === "activo" ? "#1e3a5f"
@@ -208,15 +305,54 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
 
   const badge = rec.estado === "cerrado"
     ? "bg-[#1a1d23] text-[#6b7280] border border-[#2d3139]"
-    : rec.estado === "activo"
-    ? "bg-[#1c2f4a] text-[#60a5fa] border border-[#1e3a5f]"
-    : vencido
-    ? "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]"
+    : rec.estado === "activo" ? "bg-[#1c2f4a] text-[#60a5fa] border border-[#1e3a5f]"
+    : vencido ? "bg-[#2a0e0e] text-[#f87171] border border-[#4a1a1a]"
     : "bg-[#0e1c35] text-[#60a5fa] border border-[#1e3a5f]";
 
   const badgeLabel = rec.estado === "cerrado" ? "Cerrado"
     : rec.estado === "activo" ? "Hoy"
     : vencido ? "Vencido" : "Pendiente";
+
+  if (editing) {
+    return (
+      <div className="bg-[#161b22] border border-[#58a6ff]/30 rounded-xl p-4 flex flex-col gap-3">
+        <div className="flex items-center gap-1.5">
+          <Bell size={10} className="text-[#60a5fa]" />
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[#60a5fa]">Editando recordatorio</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Nombre">
+            <input value={nombre} onChange={e => setNombre(e.target.value)} className={inputCls} />
+          </Field>
+          <Field label="Teléfono">
+            <input value={telefono} onChange={e => setTelefono(e.target.value)} className={inputCls} />
+          </Field>
+          <div className="col-span-2">
+            <Field label="Fecha y hora">
+              <input type="datetime-local" value={fechaInput} onChange={e => setFechaInput(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <div className="col-span-2">
+            <Field label="Nota">
+              <input value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej: llamar para seguimiento" className={inputCls} />
+            </Field>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1 border-t border-[#21262d]">
+          <button onClick={guardar} disabled={saving}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 disabled:opacity-40 transition-colors">
+            <Check size={11} /> {saving ? "Guardando..." : "Guardar"}
+          </button>
+          <button onClick={resetEdit}
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+            <X size={11} /> Cancelar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`bg-[#161b22] border rounded-xl p-4 flex flex-col gap-3 transition-opacity ${rec.estado === "cerrado" ? "opacity-40" : ""}`}
@@ -226,6 +362,10 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
         <Bell size={10} className="text-[#60a5fa]" />
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#60a5fa]">Recordatorio</span>
         <div className="flex-1" />
+        <button onClick={() => setEditing(true)}
+          className="flex items-center gap-1 text-[10px] text-[#484f58] hover:text-[#8b949e] mr-2 transition-colors">
+          <Pencil size={10} /> Editar
+        </button>
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badge}`}>{badgeLabel}</span>
       </div>
 
@@ -242,19 +382,35 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
           </span>
         )}
         <span className={`flex items-center gap-1.5 ${vencido && rec.estado !== "cerrado" ? "text-[#f87171]" : ""}`}>
-          <Clock size={10} />
-          {formatFecha(rec.fechaMs)}
+          <Clock size={10} /> {formatFecha(rec.fechaMs)}
         </span>
       </div>
 
-      {rec.estado !== "cerrado" && (
-        <div className="pt-1 border-t border-[#21262d]">
+      <div className="flex flex-col gap-2 pt-1 border-t border-[#21262d]">
+        {rec.estado !== "cerrado" && (
           <button onClick={() => cerrar({ id: rec._id })}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 transition-colors">
             <Check size={11} /> Listo, ya lo contacté
           </button>
-        </div>
-      )}
+        )}
+        {confirmDelete ? (
+          <div className="flex gap-2">
+            <button onClick={() => eliminar({ id: rec._id })}
+              className="flex-1 py-1.5 text-[11px] font-semibold bg-[#3d0a0a] border border-[#7f1d1d] rounded-lg text-[#fca5a5] hover:bg-[#7f1d1d]/40 transition-colors">
+              Confirmar eliminación
+            </button>
+            <button onClick={() => setConfirmDelete(false)}
+              className="px-3 py-1.5 text-[11px] text-[#484f58] border border-[#21262d] rounded-lg hover:text-[#8b949e] transition-colors">
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmDelete(true)}
+            className="flex items-center justify-center gap-1.5 py-1 text-[10px] text-[#484f58] hover:text-[#f87171] transition-colors">
+            <Trash2 size={10} /> Eliminar recordatorio
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -269,7 +425,7 @@ function NuevoRecordatorioForm({ onClose }: { onClose: () => void }) {
   const [fecha, setFecha] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async () => {
+  async function handleSubmit() {
     if (!nombre.trim() || !fecha) return;
     setLoading(true);
     try {
@@ -283,7 +439,7 @@ function NuevoRecordatorioForm({ onClose }: { onClose: () => void }) {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   return (
     <div className="bg-[#161b22] border border-[#1e3a5f] rounded-xl p-4 flex flex-col gap-3">
@@ -296,24 +452,20 @@ function NuevoRecordatorioForm({ onClose }: { onClose: () => void }) {
 
       <div className="grid grid-cols-2 gap-2">
         <div className="col-span-2">
-          <label className="text-[10px] text-[#484f58] mb-1 block">Nombre *</label>
-          <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre del contacto"
-            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
+          <Field label="Nombre *">
+            <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre del contacto" className={inputCls} />
+          </Field>
         </div>
-        <div>
-          <label className="text-[10px] text-[#484f58] mb-1 block">Teléfono</label>
-          <input value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="549..."
-            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
-        </div>
-        <div>
-          <label className="text-[10px] text-[#484f58] mb-1 block">Fecha y hora *</label>
-          <input type="datetime-local" value={fecha} onChange={(e) => setFecha(e.target.value)}
-            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40" />
-        </div>
+        <Field label="Teléfono">
+          <input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="549..." className={inputCls} />
+        </Field>
+        <Field label="Fecha y hora *">
+          <input type="datetime-local" value={fecha} onChange={e => setFecha(e.target.value)} className={inputCls} />
+        </Field>
         <div className="col-span-2">
-          <label className="text-[10px] text-[#484f58] mb-1 block">Nota</label>
-          <input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: llamar para hacer seguimiento"
-            className="w-full bg-[#0d1117] border border-[#30363d] rounded-lg px-3 py-1.5 text-[11px] text-[#e6edf3] focus:outline-none focus:ring-1 focus:ring-[#60a5fa]/40 placeholder-[#484f58]" />
+          <Field label="Nota">
+            <input value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej: llamar para hacer seguimiento" className={inputCls} />
+          </Field>
         </div>
       </div>
 
@@ -329,15 +481,8 @@ function NuevoRecordatorioForm({ onClose }: { onClose: () => void }) {
 
 const DIAS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
-function VistaSemanaBadge({ tipo }: { tipo: "cita" | "rec" }) {
-  return tipo === "cita"
-    ? <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0" />
-    : <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] shrink-0" />;
-}
-
 function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: Recordatorio[] }) {
   const [semanaOffset, setSemanaOffset] = useState(0);
-
   const hoy = new Date();
   const lunes = startOfWeek(hoy);
   lunes.setDate(lunes.getDate() + semanaOffset * 7);
@@ -360,7 +505,6 @@ function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: R
 
   return (
     <div>
-      {/* Nav semana */}
       <div className="flex items-center justify-between mb-4">
         <button onClick={() => setSemanaOffset(o => o - 1)}
           className="px-3 py-1.5 text-[11px] border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
@@ -375,7 +519,6 @@ function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: R
         </button>
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-7 gap-1.5">
         {dias.map((day, i) => {
           const citasDelDia = citas.filter(c => c.fechaCita && esMismoDia(c.fechaCita, day) && c.estado === "pendiente");
@@ -389,35 +532,25 @@ function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: R
             }`}>
               <div className="text-center">
                 <p className="text-[9px] font-semibold uppercase tracking-widest text-[#484f58]">{DIAS[i]}</p>
-                <p className={`text-[16px] font-bold leading-tight ${hoyDia ? "text-[#00ff9d]" : "text-[#e6edf3]"}`}>
-                  {day.getDate()}
-                </p>
-                {total > 0 && (
-                  <span className="text-[9px] font-semibold text-[#484f58]">{total} evento{total > 1 ? "s" : ""}</span>
-                )}
+                <p className={`text-[16px] font-bold leading-tight ${hoyDia ? "text-[#00ff9d]" : "text-[#e6edf3]"}`}>{day.getDate()}</p>
+                {total > 0 && <span className="text-[9px] text-[#484f58]">{total} evento{total > 1 ? "s" : ""}</span>}
               </div>
               <div className="flex flex-col gap-1 flex-1">
                 {citasDelDia.map(c => (
                   <div key={c._id} className="flex items-start gap-1 bg-[#251a00] border border-[#3d2a00] rounded-lg px-1.5 py-1">
-                    <VistaSemanaBadge tipo="cita" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0 mt-0.5" />
                     <div className="min-w-0">
                       <p className="text-[9px] font-semibold text-[#f59e0b] truncate leading-tight">{c.prospectNombre}</p>
-                      {c.fechaCita && (
-                        <p className="text-[8px] text-[#8b949e]">
-                          {new Date(c.fechaCita).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}
-                        </p>
-                      )}
+                      {c.fechaCita && <p className="text-[8px] text-[#8b949e]">{new Date(c.fechaCita).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}</p>}
                     </div>
                   </div>
                 ))}
                 {recsDelDia.map(r => (
                   <div key={r._id} className="flex items-start gap-1 bg-[#0e1c35] border border-[#1e3a5f] rounded-lg px-1.5 py-1">
-                    <VistaSemanaBadge tipo="rec" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#60a5fa] shrink-0 mt-0.5" />
                     <div className="min-w-0">
                       <p className="text-[9px] font-semibold text-[#60a5fa] truncate leading-tight">{r.prospectNombre}</p>
-                      <p className="text-[8px] text-[#8b949e]">
-                        {new Date(r.fechaMs).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}
-                      </p>
+                      <p className="text-[8px] text-[#8b949e]">{new Date(r.fechaMs).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" })}</p>
                     </div>
                   </div>
                 ))}
@@ -427,7 +560,6 @@ function VistaSemana({ citas, recordatorios }: { citas: Cita[]; recordatorios: R
         })}
       </div>
 
-      {/* Leyenda */}
       <div className="flex items-center gap-4 mt-3 justify-end">
         <span className="flex items-center gap-1.5 text-[10px] text-[#484f58]">
           <span className="w-2 h-2 rounded-full bg-[#f59e0b]" /> Cita agendada
@@ -469,8 +601,8 @@ export default function Calendario() {
   });
 
   const totalPendientes =
-    citasList.filter((c) => c.estado === "pendiente").length +
-    recsList.filter((r) => r.estado !== "cerrado").length;
+    citasList.filter(c => c.estado === "pendiente").length +
+    recsList.filter(r => r.estado !== "cerrado").length;
 
   const loading = citas === undefined || recordatorios === undefined;
 
@@ -501,7 +633,6 @@ export default function Calendario() {
         </div>
       </div>
 
-      {/* Form nuevo recordatorio */}
       {mostrarFormRec && (
         <div className="mb-5">
           <NuevoRecordatorioForm onClose={() => setMostrarFormRec(false)} />
@@ -524,7 +655,7 @@ export default function Calendario() {
         </div>
       </div>
 
-      {/* Tabs + toggle vista */}
+      {/* Tabs + toggle */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex gap-2">
           {([
@@ -563,16 +694,14 @@ export default function Calendario() {
         <div className="text-center py-20">
           <CalendarDays size={32} className="text-[#30363d] mx-auto mb-3" />
           <p className="text-[#484f58] text-sm">
-            {seccion === "citas"
-              ? "Cuando el bot cierre una reunión, aparecerá acá."
-              : seccion === "recordatorios"
-              ? "No hay recordatorios activos."
+            {seccion === "citas" ? "Cuando el bot cierre una reunión, aparecerá acá."
+              : seccion === "recordatorios" ? "No hay recordatorios activos."
               : "No hay citas ni recordatorios por ahora."}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {items.map((item) =>
+          {items.map(item =>
             item.tipo === "cita"
               ? <CitaCard key={`cita-${item.data._id}`} cita={item.data} />
               : <RecordatorioCard key={`rec-${item.data._id}`} rec={item.data} />
