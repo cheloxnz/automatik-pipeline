@@ -420,6 +420,7 @@ function RecordatoriosBanner() {
 
 function ProspectosInner() {
   const searchParams = useSearchParams();
+  const telParam = searchParams.get("tel");
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
 
@@ -449,13 +450,14 @@ function ProspectosInner() {
   const [monto, setMonto] = useState("");
   const [panelProspect, setPanelProspect] = useState<typeof prospects[0] | null>(null);
 
-  // Auto-abrir panel si viene ?tel= desde el calendario
+  // Buscar prospect directo por teléfono cuando viene ?tel= desde el calendario
+  const prospectPorTel = useQuery(
+    api.prospects.getByTelefono,
+    telParam ? { telefono: telParam } : "skip"
+  );
   useEffect(() => {
-    const tel = searchParams.get("tel");
-    if (!tel || !prospects.length || panelProspect) return;
-    const found = prospects.find(p => p.telefono?.replace(/\D/g, "") === tel.replace(/\D/g, ""));
-    if (found) setPanelProspect(found);
-  }, [searchParams, prospects]);
+    if (prospectPorTel && !panelProspect) setPanelProspect(prospectPorTel as typeof prospects[0]);
+  }, [prospectPorTel]);
 
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
