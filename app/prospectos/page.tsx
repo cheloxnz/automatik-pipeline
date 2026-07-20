@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -418,7 +418,7 @@ function RecordatoriosBanner() {
   );
 }
 
-export default function Prospectos() {
+function ProspectosInner() {
   const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
@@ -908,7 +908,7 @@ export default function Prospectos() {
         </Modal>
       )}
 
-      {/* Modales */}
+      {/* Modal nuevo/editar prospecto */}
       {(showAdd || editId) && (
         <Modal title={editId ? "Editar prospecto" : "Nuevo prospecto"} onClose={() => { setShowAdd(false); setEditId(null); setForm(EMPTY); }}>
           <div className="grid grid-cols-2 gap-3 mb-4">
@@ -918,6 +918,7 @@ export default function Prospectos() {
             <FormField label="Ciudad" value={form.ciudad} onChange={field("ciudad")} placeholder="Buenos Aires" />
             <FormField label="Teléfono" value={form.telefono} onChange={field("telefono")} placeholder="5491112345678" />
             <FormField label="Email" value={form.email} onChange={field("email")} placeholder="info@ejemplo.com" type="email" />
+
             <div className="col-span-2">
               <FormField label="URL Perfil / Directorio" value={form.urlPerfil} onChange={field("urlPerfil")} placeholder="https://..." />
             </div>
@@ -938,5 +939,13 @@ export default function Prospectos() {
         </Modal>
       )}
     </div>
+  );
+}
+
+export default function Prospectos() {
+  return (
+    <Suspense fallback={null}>
+      <ProspectosInner />
+    </Suspense>
   );
 }
