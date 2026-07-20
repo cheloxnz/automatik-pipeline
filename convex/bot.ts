@@ -412,7 +412,11 @@ export const procesarMensaje = action({
     if (esNuevo === false) return; // webhook duplicado — ya procesado
 
     // ── Detección de autoresponder ────────────────────────────────────────────
-    if (esAutoresponder(texto)) {
+    // Solo aplica si todavía no hubo mensajes salientes (primer contacto)
+    // Si ya conversamos con un humano, ignorar aunque diga "horario de atención"
+    const histPrevio = await ctx.runQuery(api.bot.mensajesRecientes, { telefono, limite: 10 });
+    const yaTuvimosConversacion = histPrevio.some((m) => m.tipo === "saliente");
+    if (!yaTuvimosConversacion && esAutoresponder(texto)) {
       console.log(`[AUTORESPONDER] Detectado en +${telNorm} — marcando respondio.`);
       if (prospect && prospect.estado === "enviado") {
         await ctx.runMutation(api.prospects.updateEstado, { id: prospect._id, estado: "respondio", mensajeId });
