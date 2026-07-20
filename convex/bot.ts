@@ -495,9 +495,18 @@ export const procesarMensaje = action({
 
     respuestaLimpia = await procesarMedia(respuestaLimpia, telefono, phoneId, token);
 
-    // ── MEJORA 1: Delay humano — 15 a 45 segundos aleatorios ────────────────
+    // ── Delay humano — 15 a 45 segundos aleatorios ───────────────────────────
     const delayMs = 15000 + Math.floor(Math.random() * 30000);
     await new Promise((r) => setTimeout(r, delayMs));
+
+    // Anti-duplicado: si ya se envió una respuesta saliente en los últimos 90s,
+    // otro action paralelo ya respondió — saltear para no duplicar.
+    const msgsPost = await ctx.runQuery(api.bot.mensajesRecientes, { telefono, limite: 5 });
+    const ultimoSaliente = msgsPost.find((m) => m.tipo === "saliente");
+    if (ultimoSaliente && Date.now() - ultimoSaliente.createdAt < 90_000) {
+      console.log(`[ANTI-DUP] +${telNorm} — ya se respondió hace ${Math.round((Date.now() - ultimoSaliente.createdAt) / 1000)}s, saltando.`);
+      return;
+    }
 
     if (respuestaLimpia) {
       await enviarTexto(telefono, respuestaLimpia, phoneId, token);
@@ -828,6 +837,23 @@ Cálido, humano, sin presión. Solo el mensaje, nada más.`;
     }
 
     return { enviados, skip: false };
+  },
+});
+
+// ── Envío manual de mensaje (uso desde scripts) ───────────────────────────────
+export const enviarMensajeManual = action({
+  args: { telefono: v.string(), texto: v.string() },
+  handler: async (ctx, { telefono, texto }): Promise<boolean> => {
+    const token = process.env.WA_TOKEN;
+    const phoneId = process.env.WA_PHONE_ID ?? "1236307326213120";
+    if (!token) return false;
+    const ok = await enviarTexto(telefono, texto, phoneId, token);
+    if (ok) {
+      await ctx.runMutation(api.prospects.guardarMensaje, {
+        telefono, texto, tipo: "saliente",
+      });
+    }
+    return ok;
   },
 });
 
