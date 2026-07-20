@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import {
   CalendarDays, Phone, Check, X, Clock, ExternalLink,
-  Bell, Trash2, Pencil, Plus, LayoutList, Calendar,
+  Bell, Trash2, Pencil, Plus, LayoutList, Calendar, MessageCircle,
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -82,6 +83,7 @@ const CITA_BADGE: Record<string, string> = {
 };
 
 function CitaCard({ cita }: { cita: Cita }) {
+  const router = useRouter();
   const actualizar = useMutation(api.citas.actualizar);
   const actualizarEstado = useMutation(api.citas.actualizarEstado);
   const eliminar = useMutation(api.citas.eliminar);
@@ -218,6 +220,10 @@ function CitaCard({ cita }: { cita: Cita }) {
       </div>
 
       <div className="flex flex-col gap-2 pt-1 border-t border-[#21262d]">
+        <button onClick={() => router.push(`/prospectos?tel=${cita.prospectTelefono.replace(/\D/g, "")}`)}
+          className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#161b22] border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+          <MessageCircle size={11} /> Ir a la conversación
+        </button>
         {cita.estado === "pendiente" ? (
           <div className="flex gap-2">
             <button onClick={() => actualizarEstado({ id: cita._id, estado: "realizada" })}
@@ -260,6 +266,7 @@ function CitaCard({ cita }: { cita: Cita }) {
 // ── Recordatorio card ─────────────────────────────────────────────────────────
 
 function RecordatorioCard({ rec }: { rec: Recordatorio }) {
+  const router = useRouter();
   const cerrar = useMutation(api.recordatorios.cerrar);
   const actualizar = useMutation(api.recordatorios.actualizar);
   const eliminar = useMutation(api.recordatorios.eliminar);
@@ -387,6 +394,12 @@ function RecordatorioCard({ rec }: { rec: Recordatorio }) {
       </div>
 
       <div className="flex flex-col gap-2 pt-1 border-t border-[#21262d]">
+        {rec.prospectTelefono && (
+          <button onClick={() => router.push(`/prospectos?tel=${rec.prospectTelefono!.replace(/\D/g, "")}`)}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#161b22] border border-[#30363d] rounded-lg text-[#8b949e] hover:text-[#e6edf3] hover:border-[#484f58] transition-colors">
+            <MessageCircle size={11} /> Ir a la conversación
+          </button>
+        )}
         {rec.estado !== "cerrado" && (
           <button onClick={() => cerrar({ id: rec._id })}
             className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold bg-[#0a2218] border border-[#0f3d28] rounded-lg text-[#34d399] hover:bg-[#0f3d28]/40 transition-colors">

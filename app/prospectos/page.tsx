@@ -1,5 +1,6 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useAction, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -418,6 +419,7 @@ function RecordatoriosBanner() {
 }
 
 export default function Prospectos() {
+  const searchParams = useSearchParams();
   const [search, setSearch] = useState("");
   const [filterEstado, setFilterEstado] = useState("todos");
 
@@ -446,6 +448,15 @@ export default function Prospectos() {
   const [cerrandoId, setCerrandoId] = useState<Id<"prospects"> | null>(null);
   const [monto, setMonto] = useState("");
   const [panelProspect, setPanelProspect] = useState<typeof prospects[0] | null>(null);
+
+  // Auto-abrir panel si viene ?tel= desde el calendario
+  useEffect(() => {
+    const tel = searchParams.get("tel");
+    if (!tel || !prospects.length || panelProspect) return;
+    const found = prospects.find(p => p.telefono?.replace(/\D/g, "") === tel.replace(/\D/g, ""));
+    if (found) setPanelProspect(found);
+  }, [searchParams, prospects]);
+
   const [form, setForm] = useState<ProspectForm>(EMPTY);
   const fileRef = useRef<HTMLInputElement>(null);
   const [selected, setSelected] = useState<Set<Id<"prospects">>>(new Set());
